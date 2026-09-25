@@ -32,6 +32,45 @@ export default function GuriQuestLog() {
   const [daysCleared, setDaysCleared] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
+  const [showBackup, setShowBackup] = useState(false);
+  const [restoreInput, setRestoreInput] = useState("");
+  const [restoreMsg, setRestoreMsg] = useState("");
+  const [notes, setNotes] = useState([]);
+  const [noteInput, setNoteInput] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
+
+  async function saveNotes(next) {
+    setNotes(next);
+    try {
+      await window.storage.set("guri-notes", JSON.stringify(next));
+    } catch (e) { console.error("notes save failed", e); }
+  }
+
+  function addNote() {
+    const text = noteInput.trim();
+    if (!text) return;
+    const d = new Date();
+    const stamp = `${DAY_NAMES[d.getDay()].slice(0, 3)} ${d.getMonth() + 1}/${d.getDate()}`;
+    saveNotes([{ id: Date.now(), stamp, text }, ...notes]);
+    setNoteInput("");
+  }
+
+  function deleteNote(id) {
+    saveNotes(notes.filter((n) => n.id !== id));
+  }
+
+  async function restoreFromCode() {
+    try {
+      const data = JSON.parse(atob(restoreInput.trim()));
+      if (typeof data.c !== "number" || data.g !== "guri") throw new Error("bad code");
+      setDaysCleared(data.c);
+      await window.storage.set("guri-days-cleared", JSON.stringify({ count: data.c }));
+      setRestoreMsg(`✓ Restored — ${data.c} days cleared`);
+      setRestoreInput("");
+    } catch (e) {
+      setRestoreMsg("✕ That code isn't right — check for typos");
+    }
+  }
 
   const now = new Date();
   const dayType = DAY_TYPES[now.getDay()];
@@ -50,6 +89,10 @@ export default function GuriQuestLog() {
         const s = await window.storage.get("guri-days-cleared");
         if (s?.value) setDaysCleared(JSON.parse(s.value).count || 0);
       } catch (e) { /* no save yet */ }
+      try {
+        const n = await window.storage.get("guri-notes");
+        if (n?.value) setNotes(JSON.parse(n.value));
+      } catch (e) { /* no notes yet */ }
       setLoaded(true);
     })();
   }, [dateKey]);
@@ -116,6 +159,8 @@ export default function GuriQuestLog() {
             </p>
           </div>
         </div>
+        <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
+        <BackupPanel {...{ daysCleared, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
         <Footer />
       </div>
     );
@@ -153,7 +198,7 @@ export default function GuriQuestLog() {
               </div>
               <div style={{ flex: 1, textAlign: "left" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ ...S.display, fontSize: 15, color: on ? "#8FA6C9" : "#E8ECF4", textDecoration: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>
+                  <span style={{ ...S.display, fontSize: 15, color: on ? "#8FA6C9" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>
                     {t.title}
                   </span>
                   <span style={{ ...S.mono, fontSize: 10, color: "#556075", whiteSpace: "nowrap" }}>{t.time}</span>
@@ -191,7 +236,113 @@ export default function GuriQuestLog() {
         </div>
       )}
 
+      <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
+      <BackupPanel {...{ daysCleared, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
       <Footer />
+    </div>
+  );
+}
+
+function NotesPanel({ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }) {
+  return (
+    <div style={{ padding: "16px 16px 0" }}>
+      <button
+        onClick={() => setShowNotes(!showNotes)}
+        style={{ ...S.mono, fontSize: 10, letterSpacing: 1, color: "#7A8598", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, cursor: "pointer", padding: "10px 0", width: "100%", textAlign: "center" }}
+      >
+        {showNotes ? `▴ NOTES (${notes.length})` : `▾ NOTES — problems, complaints, anything (${notes.length})`}
+      </button>
+
+      {showNotes && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addNote(); }}
+              placeholder="e.g. packet Q14 made no sense"
+              style={{ ...S.body, flex: 1, fontSize: 13, color: "#E8ECF4", background: "#12161F", border: "1px solid #1E2530", borderRadius: 8, padding: "10px 11px", outline: "none", minWidth: 0 }}
+            />
+            <button onClick={addNote} disabled={!noteInput.trim()} style={{ ...S.display, fontSize: 12, letterSpacing: 1, color: noteInput.trim() ? "#0B0E14" : "#556075", background: noteInput.trim() ? "#6FA8FF" : "#1E2530", border: "none", borderRadius: 8, padding: "10px 14px", cursor: noteInput.trim() ? "pointer" : "default" }}>
+              ADD
+            </button>
+          </div>
+
+          {notes.length === 0 ? (
+            <p style={{ ...S.body, fontSize: 12, color: "#556075", textAlign: "center", padding: "14px 0 4px" }}>
+              Nothing yet. Stuck on something? Class issue? Drop it here so it doesn't get forgotten.
+            </p>
+          ) : (
+            <div style={{ marginTop: 10 }}>
+              {notes.map((n) => (
+                <div key={n.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, padding: "10px 12px", marginBottom: 7 }}>
+                  <span style={{ ...S.mono, fontSize: 9.5, color: "#556075", whiteSpace: "nowrap", marginTop: 2 }}>{n.stamp}</span>
+                  <span style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", flex: 1, lineHeight: 1.5, wordBreak: "break-word" }}>{n.text}</span>
+                  <button onClick={() => deleteNote(n.id)} style={{ background: "none", border: "none", color: "#3A4356", cursor: "pointer", fontSize: 13, padding: "0 2px" }} aria-label="Delete note">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BackupPanel({ daysCleared, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }) {
+  const code = btoa(JSON.stringify({ g: "guri", c: daysCleared }));
+  const [copyState, setCopyState] = useState("idle");
+
+  async function copyCode() {
+    try {
+      if (!navigator.clipboard) throw new Error("no clipboard");
+      await navigator.clipboard.writeText(code);
+      setCopyState("copied");
+    } catch (e) {
+      setCopyState("manual");
+    }
+    setTimeout(() => setCopyState("idle"), 2500);
+  }
+
+  return (
+    <div style={{ padding: "10px 16px 0" }}>
+      <button
+        onClick={() => setShowBackup(!showBackup)}
+        style={{ ...S.mono, fontSize: 10, letterSpacing: 1, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: "6px 0", width: "100%", textAlign: "center" }}
+      >
+        {showBackup ? "▴ HIDE BACKUP" : "▾ BACKUP / TRANSFER STREAK"}
+      </button>
+
+      {showBackup && (
+        <div style={{ border: "1px solid #1E2530", borderRadius: 12, padding: "14px 14px", background: "#0F131B", marginTop: 4 }}>
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598" }}>YOUR TRANSFER CODE</div>
+          <p style={{ ...S.body, fontSize: 11.5, color: "#8A94A8", margin: "5px 0 8px", lineHeight: 1.5 }}>
+            If this app ever gets updated to a new version, copy this code (or screenshot it) and paste it into the new one to keep your Days Cleared streak.
+          </p>
+          <button onClick={copyCode} style={{ ...S.mono, fontSize: 12, color: "#6FA8FF", background: "#12161F", border: "1px solid #2E6FF2", borderRadius: 8, padding: "9px 12px", width: "100%", cursor: "pointer", wordBreak: "break-all", textAlign: "left", userSelect: "text" }}>
+            {code}
+            <span style={{ display: "block", fontSize: 9, color: copyState === "idle" ? "#556075" : "#F2C14E", marginTop: 5, letterSpacing: 1 }}>
+              {copyState === "copied" ? "✓ COPIED" : copyState === "manual" ? "COPY BLOCKED — SCREENSHOT THIS INSTEAD" : "TAP TO COPY"}
+            </span>
+          </button>
+
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", marginTop: 16 }}>RESTORE A STREAK</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 7 }}>
+            <input
+              value={restoreInput}
+              onChange={(e) => setRestoreInput(e.target.value)}
+              placeholder="paste code here"
+              style={{ ...S.mono, flex: 1, fontSize: 12, color: "#E8ECF4", background: "#12161F", border: "1px solid #1E2530", borderRadius: 8, padding: "9px 10px", outline: "none", minWidth: 0 }}
+            />
+            <button onClick={restoreFromCode} disabled={!restoreInput.trim()} style={{ ...S.display, fontSize: 12, letterSpacing: 1, color: restoreInput.trim() ? "#0B0E14" : "#556075", background: restoreInput.trim() ? "#6FA8FF" : "#1E2530", border: "none", borderRadius: 8, padding: "9px 14px", cursor: restoreInput.trim() ? "pointer" : "default" }}>
+              RESTORE
+            </button>
+          </div>
+          {restoreMsg && (
+            <div style={{ ...S.mono, fontSize: 11, color: restoreMsg.startsWith("✓") ? "#F2C14E" : "#E06C6C", marginTop: 8 }}>{restoreMsg}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
