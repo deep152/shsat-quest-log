@@ -1,25 +1,71 @@
 import { useState, useEffect } from "react";
 
 // ---- schedule data -------------------------------------------------
-const KHANS_TASKS = [
-  { id: "noscreen", time: "8:30–9:00", title: "Wake up clean", desc: "Cha, brush, chill. No PS5, no scrolling. Walk in with a fresh brain, not a fried one.", xp: 15 },
-  { id: "kindle", time: "9:00–9:40", title: "Kindle 20–30 min", desc: "Reading now = free ELA points later. It doesn't even feel like studying.", xp: 15 },
-  { id: "khans", time: "10:00–2:00", title: "Khan's class", desc: "Actually lock in. Half-listening wastes the whole 4 hours.", xp: 20 },
-  { id: "packet", time: "after 4", title: "The Block: 5–7 packet questions", desc: "Worked through properly, not speedran. Phone stays outside the room.", xp: 30 },
-  { id: "errorlog", time: "after 4", title: "Error log", desc: "Every miss goes in the notebook: what it tested, why you missed it, how to do it right. No googling answers.", xp: 20 },
+// Mon–Fri: after-school block system. Sat/Sun: Khan's + home block.
+const WEEKDAY_TASKS = [
+  {
+    id: "block1", time: "100 min", title: "Block 1 — Study Run → Check → Rework",
+    desc: "Closed-book work, then grade with the sticky-note trick, then rework misses before peeking at the answer.",
+    xp: 35, timer: [
+      { label: "Study Run — answer key CLOSED", minutes: 60 },
+      { label: "Check & Sticky-Note misses", minutes: 20 },
+      { label: "Instant Rework — before peeking", minutes: 20 },
+    ],
+  },
+  {
+    id: "break1", time: "60 min", title: "Kindle / Phone break",
+    desc: "His choice how to split it — this is the combined cap for both, not an hour each.",
+    xp: 10, timer: [{ label: "Kindle or phone — your choice, combined cap", minutes: 60 }],
+  },
+  {
+    id: "block2", time: "100 min", title: "Block 2 — Study Run → Check → Rework",
+    desc: "Same cycle as Block 1, new material.",
+    xp: 35, timer: [
+      { label: "Study Run — answer key CLOSED", minutes: 60 },
+      { label: "Check & Sticky-Note misses", minutes: 20 },
+      { label: "Instant Rework — before peeking", minutes: 20 },
+    ],
+  },
+  {
+    id: "block3", time: "35 min", title: "Block 3 — Ghost Review (after dinner)",
+    desc: "No new material. Only flip to pages with a sticky note and rework them. Right it if fixed → rip it out.",
+    xp: 20, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 35 }],
+  },
 ];
 
-const SUNDAY_TASKS = [
-  { id: "class", time: "11:00–1:30", title: "Khan's class", desc: "Short day. Still lock in.", xp: 25 },
-  { id: "wrap1", time: "after lunch", title: "Finish + check the packet", desc: "All 33 done before the new one drops. No last-day cram.", xp: 25 },
-  { id: "wrap2", time: "after lunch", title: "Reread the week's error log", desc: "The whole week. This is where the points actually come from.", xp: 25 },
-  { id: "wrap3", time: "after lunch", title: "Redo 3–5 missed questions", desc: "Without looking at the answer. Get them right now = you actually learned it.", xp: 25 },
+const KHANS_SAT_TASKS = [
+  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Walk in with a fresh brain, not a fried one.", xp: 20 },
+  { id: "class", time: "10:00–1:30", title: "Khan's class", desc: "Lock in for the full session.", xp: 25 },
+  {
+    id: "homeblock", time: "75 min", title: "Home Block — Study Run → Check → Rework",
+    desc: "One full cycle after class, once he's home and eaten.",
+    xp: 35, timer: [
+      { label: "Study Run — answer key CLOSED", minutes: 45 },
+      { label: "Check & Sticky-Note misses", minutes: 15 },
+      { label: "Instant Rework — before peeking", minutes: 15 },
+    ],
+  },
+  {
+    id: "ghost", time: "25 min", title: "Ghost Review",
+    desc: "Flip only to sticky-note pages and rework them.",
+    xp: 20, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 25 }],
+  },
 ];
+
+const KHANS_SUN_TASKS = KHANS_SAT_TASKS.map((t) =>
+  t.id === "class" ? { ...t, time: "11:00–2:00" } : t
+);
 
 const DAY_TYPES = {
-  0: "sunday", 1: "rest", 2: "khans", 3: "khans", 4: "khans", 5: "rest", 6: "khans",
+  0: "khans_sun", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday", 5: "weekday", 6: "khans_sat",
 };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function getTasks(dayType) {
+  if (dayType === "weekday") return WEEKDAY_TASKS;
+  if (dayType === "khans_sat") return KHANS_SAT_TASKS;
+  return KHANS_SUN_TASKS;
+}
 
 function todayKey() {
   const d = new Date();
@@ -76,7 +122,9 @@ export default function GuriQuestLog() {
   const dayType = DAY_TYPES[now.getDay()];
   const dayName = DAY_NAMES[now.getDay()];
   const dateKey = todayKey();
-  const tasks = dayType === "sunday" ? SUNDAY_TASKS : KHANS_TASKS;
+  const tasks = getTasks(dayType);
+  const monthName = now.toLocaleString("en-US", { month: "long" }).toUpperCase();
+  const sectionLabel = dayType === "weekday" ? "AFTER-SCHOOL QUESTS" : "KHAN'S DAY";
 
   // load saved state
   useEffect(() => {
@@ -101,7 +149,7 @@ export default function GuriQuestLog() {
   const totalXP = tasks.reduce((a, t) => a + t.xp, 0);
   const earnedXP = tasks.reduce((a, t) => a + (checked[t.id] ? t.xp : 0), 0);
   const pct = Math.round((earnedXP / totalXP) * 100);
-  const allDone = dayType !== "rest" && doneCount === tasks.length;
+  const allDone = doneCount === tasks.length;
 
   async function toggle(id) {
     const next = { ...checked, [id]: !checked[id] };
@@ -129,6 +177,11 @@ export default function GuriQuestLog() {
     }
   }
 
+  // mark complete via timer finishing (only if not already checked)
+  function completeViaTimer(id) {
+    if (!checked[id]) toggle(id);
+  }
+
   if (!loaded) {
     return (
       <div style={S.shell}>
@@ -138,46 +191,15 @@ export default function GuriQuestLog() {
     );
   }
 
-  // ---- rest day screen ----
-  if (dayType === "rest") {
-    return (
-      <div style={S.shell}>
-        <style>{FONTS}</style>
-        <Header dayName={dayName} daysCleared={daysCleared} />
-        <div style={S.restCard}>
-          <div style={S.psRow}>{["△", "○", "✕", "□"].map((s, i) => (
-            <span key={i} style={{ ...S.psSym, opacity: 0.35 }}>{s}</span>
-          ))}</div>
-          <div style={{ ...S.display, fontSize: 30, color: "#E8ECF4", marginTop: 14 }}>FREE DAY</div>
-          <p style={{ ...S.body, color: "#9AA4B5", maxWidth: 340, margin: "12px auto 0", lineHeight: 1.6 }}>
-            No quests today. One rule only:
-          </p>
-          <div style={S.restRule}>
-            <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⚠ DO NOT TOUCH</span>
-            <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 14, lineHeight: 1.55 }}>
-              The 3 practice tests in the back of the Kaplan book. Those are Sept/Oct dress rehearsals. Burning them now wastes them.
-            </p>
-          </div>
-        </div>
-        <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
-        <BackupPanel {...{ daysCleared, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
-        <Footer />
-      </div>
-    );
-  }
-
-  // ---- quest day screen ----
   return (
     <div style={S.shell}>
       <style>{FONTS}</style>
-      <Header dayName={dayName} daysCleared={daysCleared} />
+      <Header dayName={dayName} daysCleared={daysCleared} monthName={monthName} />
 
       {/* XP bar */}
       <div style={S.xpWrap}>
         <div style={S.xpLabelRow}>
-          <span style={{ ...S.mono, fontSize: 11, color: "#7A8598", letterSpacing: 1.5 }}>
-            {dayType === "sunday" ? "WEEKLY WRAP" : "DAILY QUESTS"}
-          </span>
+          <span style={{ ...S.mono, fontSize: 11, color: "#7A8598", letterSpacing: 1.5 }}>{sectionLabel}</span>
           <span style={{ ...S.mono, fontSize: 11, color: pct === 100 ? "#F2C14E" : "#6FA8FF", letterSpacing: 1 }}>
             {earnedXP} / {totalXP} XP
           </span>
@@ -192,23 +214,32 @@ export default function GuriQuestLog() {
         {tasks.map((t) => {
           const on = !!checked[t.id];
           return (
-            <button key={t.id} onClick={() => toggle(t.id)} style={{ ...S.quest, borderColor: on ? "#2E6FF2" : "#1E2530", background: on ? "rgba(46,111,242,0.08)" : "#12161F" }}>
-              <div style={{ ...S.checkbox, borderColor: on ? "#2E6FF2" : "#3A4356", background: on ? "#2E6FF2" : "transparent" }}>
-                {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
-              </div>
-              <div style={{ flex: 1, textAlign: "left" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ ...S.display, fontSize: 15, color: on ? "#8FA6C9" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>
-                    {t.title}
-                  </span>
-                  <span style={{ ...S.mono, fontSize: 10, color: "#556075", whiteSpace: "nowrap" }}>{t.time}</span>
+            <div key={t.id} style={{ ...S.quest, borderColor: on ? "#2E6FF2" : "#1E2530", background: on ? "rgba(46,111,242,0.08)" : "#12161F" }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  onClick={() => toggle(t.id)}
+                  aria-label={on ? "Mark incomplete" : "Mark complete"}
+                  style={{ ...S.checkbox, borderColor: on ? "#2E6FF2" : "#3A4356", background: on ? "#2E6FF2" : "transparent", cursor: "pointer" }}
+                >
+                  {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+                </button>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ ...S.display, fontSize: 15, color: on ? "#8FA6C9" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>
+                      {t.title}
+                    </span>
+                    <span style={{ ...S.mono, fontSize: 10, color: "#556075", whiteSpace: "nowrap" }}>{t.time}</span>
+                  </div>
+                  <p style={{ ...S.body, fontSize: 12.5, color: on ? "#556075" : "#8A94A8", margin: "5px 0 0", lineHeight: 1.5 }}>
+                    {t.desc}
+                  </p>
                 </div>
-                <p style={{ ...S.body, fontSize: 12.5, color: on ? "#556075" : "#8A94A8", margin: "5px 0 0", lineHeight: 1.5 }}>
-                  {t.desc}
-                </p>
+                <span style={{ ...S.mono, fontSize: 10, color: on ? "#6FA8FF" : "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
               </div>
-              <span style={{ ...S.mono, fontSize: 10, color: on ? "#6FA8FF" : "#556075", alignSelf: "center" }}>+{t.xp}</span>
-            </button>
+              {t.timer && !on && (
+                <BlockTimer phases={t.timer} onFinish={() => completeViaTimer(t.id)} />
+              )}
+            </div>
           );
         })}
       </div>
@@ -239,6 +270,69 @@ export default function GuriQuestLog() {
       <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
       <BackupPanel {...{ daysCleared, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
       <Footer />
+    </div>
+  );
+}
+
+// ---- sequential block timer -----------------------------------------
+function BlockTimer({ phases, onFinish }) {
+  const [phaseIndex, setPhaseIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(phases[0].minutes * 60);
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const untouched = phaseIndex === 0 && secondsLeft === phases[0].minutes * 60;
+
+  useEffect(() => {
+    if (!running || done) return;
+    if (secondsLeft <= 0) {
+      if (phaseIndex + 1 < phases.length) {
+        setPhaseIndex((p) => p + 1);
+        setSecondsLeft(phases[phaseIndex + 1].minutes * 60);
+      } else {
+        setRunning(false);
+        setDone(true);
+        onFinish && onFinish();
+      }
+      return;
+    }
+    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [running, secondsLeft, phaseIndex, done]);
+
+  function reset() {
+    setRunning(false);
+    setDone(false);
+    setPhaseIndex(0);
+    setSecondsLeft(phases[0].minutes * 60);
+  }
+
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+  const ss = String(secondsLeft % 60).padStart(2, "0");
+
+  return (
+    <div style={S.timerBox}>
+      {done ? (
+        <div style={{ ...S.mono, fontSize: 11.5, color: "#F2C14E", textAlign: "center" }}>✓ Timer complete — quest checked off</div>
+      ) : (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ ...S.mono, fontSize: 10, color: "#7A8598", letterSpacing: 0.5 }}>
+              PHASE {phaseIndex + 1}/{phases.length} · {phases[phaseIndex].label}
+            </span>
+            <span style={{ ...S.display, fontSize: 17, color: running ? "#6FA8FF" : "#C9D2E0" }}>{mm}:{ss}</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            {!running ? (
+              <button onClick={() => setRunning(true)} style={S.timerBtnPrimary}>
+                {untouched ? "▶ Start Timer" : "▶ Resume"}
+              </button>
+            ) : (
+              <button onClick={() => setRunning(false)} style={S.timerBtnPrimary}>⏸ Pause</button>
+            )}
+            {!untouched && <button onClick={reset} style={S.timerBtnGhost}>↺ Reset</button>}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -347,11 +441,11 @@ function BackupPanel({ daysCleared, showBackup, setShowBackup, restoreInput, set
   );
 }
 
-function Header({ dayName, daysCleared }) {
+function Header({ dayName, daysCleared, monthName }) {
   return (
     <div style={S.header}>
       <div>
-        <div style={{ ...S.mono, fontSize: 10, letterSpacing: 3, color: "#556075" }}>SHSAT GRIND · AUGUST</div>
+        <div style={{ ...S.mono, fontSize: 10, letterSpacing: 3, color: "#556075" }}>SHSAT GRIND · {monthName}</div>
         <div style={{ ...S.display, fontSize: 26, color: "#E8ECF4", marginTop: 3 }}>
           GURI<span style={{ color: "#2E6FF2" }}>.</span> <span style={{ fontSize: 15, color: "#7A8598", fontWeight: 400 }}>{dayName}</span>
         </div>
@@ -367,7 +461,7 @@ function Header({ dayName, daysCleared }) {
 function Footer() {
   return (
     <p style={{ ...S.mono, fontSize: 10, color: "#3A4356", textAlign: "center", padding: "18px 20px 26px", letterSpacing: 0.5, lineHeight: 1.7 }}>
-      work before games, every day · error log &gt; 100 extra questions
+      work before games, every day · sticky note &gt; a wall of notes nobody rereads
     </p>
   );
 }
@@ -392,12 +486,13 @@ const S = {
   xpLabelRow: { display: "flex", justifyContent: "space-between", marginBottom: 6 },
   xpTrack: { height: 8, borderRadius: 4, background: "#161B26", overflow: "hidden", border: "1px solid #1E2530" },
   xpFill: { height: "100%", borderRadius: 4, transition: "width 0.45s cubic-bezier(0.22,1,0.36,1)" },
-  quest: { display: "flex", gap: 12, width: "100%", padding: "13px 13px", marginBottom: 9, borderRadius: 12, border: "1px solid", cursor: "pointer", transition: "all 0.2s", fontFamily: "inherit" },
-  checkbox: { width: 22, height: 22, minWidth: 22, borderRadius: 7, border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2, transition: "all 0.2s" },
+  quest: { width: "100%", padding: "13px 13px", marginBottom: 9, borderRadius: 12, border: "1px solid", transition: "all 0.2s", fontFamily: "inherit" },
+  checkbox: { width: 22, height: 22, minWidth: 22, borderRadius: 7, border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2, transition: "all 0.2s", padding: 0 },
   lockCard: { margin: "14px 16px 0", padding: "20px 16px", borderRadius: 14, border: "1px dashed", textAlign: "center", transition: "all 0.4s" },
   psRow: { display: "flex", justifyContent: "center", gap: 14 },
   psSym: { fontSize: 16, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 600 },
-  restCard: { margin: "30px 16px 0", padding: "34px 20px", borderRadius: 16, border: "1px solid #1E2530", background: "#0F131B", textAlign: "center" },
-  restRule: { margin: "20px auto 0", maxWidth: 340, padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)", textAlign: "left" },
   toast: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg,#F2C14E,#FFDD87)", padding: "11px 20px", borderRadius: 30, animation: "toastIn 0.35s ease", zIndex: 50, whiteSpace: "nowrap", boxShadow: "0 6px 24px rgba(242,193,78,0.35)" },
+  timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
+  timerBtnPrimary: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#6FA8FF", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
+  timerBtnGhost: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#7A8598", background: "transparent", border: "1px solid #2A3242", borderRadius: 8, padding: "8px 12px", cursor: "pointer" },
 };
