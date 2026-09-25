@@ -1,10 +1,23 @@
+// Guri's SHSAT Quest Log
+// A daily checklist app I built for my younger brother while he preps for the SHSAT.
+// It swaps out what it shows based on the day of the week (school days vs. Khan's
+// tutoring days), runs a countdown timer that walks through his study method in
+// phases, and remembers his progress across days using a simple key-value store.
+//
+// Built with React (hooks only, no class components). Styled with plain JS style
+// objects instead of a CSS file, runs cleanly as a single file
+
 import { useState, useEffect } from "react";
 
 // ---- schedule data -------------------------------------------------
+// I keep the actual schedule as plain data (arrays of objects) instead of hard-coding
+// it into the JSX. That way the rendering code below just loops over whichever list
+// applies to today - adding a new task later just means adding one object here, not
+// touching any component.
 const WEEKDAY_TASKS = [
   {
     id: "home", time: "—", title: "Home from school",
-    desc: "Snack, relax, decompress. No set length — just don't skip it.",
+    desc: "Snack, relax. Do whatever",
     xp: 5,
   },
   {
@@ -65,8 +78,12 @@ const KHANS_SAT_TASKS = [
     xp: 20, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 25 }],
   },
 ];
+// Sunday's Khan's class is just Saturday's list with a different class time -
+// rather than copy/paste the whole array, I just clone it and swap that one field.
 const KHANS_SUN_TASKS = KHANS_SAT_TASKS.map((t) => (t.id === "class" ? { ...t, time: "11:00–2:00" } : t));
 
+// getDay() returns 0-6 for Sunday-Saturday, so this object is basically a lookup
+// table: "if today is day X, use task list Y". Avoids a long if/else chain.
 const DAY_TYPES = { 0: "khans_sun", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday", 5: "weekday", 6: "khans_sat" };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
@@ -76,15 +93,21 @@ function getTasks(dayType) {
   if (dayType === "khans_sat") return KHANS_SAT_TASKS;
   return KHANS_SUN_TASKS;
 }
+// Turns a Date into "2026-09-15" so it can be used as a storage key. I build this
+// by hand instead of using .toISOString() because that converts to UTC first,
+// which can roll the date over to the wrong day depending on the time and timezone.
 function dateKeyFor(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // ---- root component --------------------------------------------------
 export default function GuriQuestLog() {
+  // All the shared state lives here and gets passed down as props. The app is
+  // small enough that I didn't need Context or a state library - just one
+  // component owning everything and handing pieces to its children.
   const [tab, setTab] = useState("today");
-  const [checked, setChecked] = useState({});
-  const [completedDates, setCompletedDates] = useState([]);
+  const [checked, setChecked] = useState({});           // today's checkboxes, e.g. { block1: true }
+  const [completedDates, setCompletedDates] = useState([]); // every "YYYY-MM-DD" he's fully cleared
   const [loaded, setLoaded] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
@@ -103,6 +126,10 @@ export default function GuriQuestLog() {
   const sectionLabel = dayType === "weekday" ? "AFTER-SCHOOL QUESTS" : "KHAN'S DAY";
   const daysCleared = completedDates.length;
 
+  // Runs once when the component first mounts, and again whenever dateKey changes
+  // (i.e. it becomes a new day). That's how today's checkboxes reset automatically
+  // without me writing any "is it a new day" logic myself - React just re-runs this
+  // whenever the value in the dependency array is different from last time.
   useEffect(() => {
     (async () => {
       try { const r = await window.storage.get(`guri-day:${dateKey}`); if (r?.value) setChecked(JSON.parse(r.value)); } catch (e) {}
@@ -132,11 +159,18 @@ export default function GuriQuestLog() {
   }
   function deleteNote(id) { saveNotes(notes.filter((n) => n.id !== id)); }
 
+  // Flips one quest's checked state and saves it. The { ...checked, [id]: ... }
+  // part matters more than it looks - React decides whether to redraw by checking
+  // if it got a *different* object, not by looking inside the old one. So I always
+  // build a brand new object here instead of doing checked[id] = true directly.
   async function toggle(id) {
     const next = { ...checked, [id]: !checked[id] };
     setChecked(next);
     try { await window.storage.set(`guri-day:${dateKey}`, JSON.stringify(next)); } catch (e) {}
 
+    // Check if this toggle just finished (or un-finished) the whole day, and keep
+    // the completedDates list in sync so the calendar tab and the streak count
+    // never disagree with each other.
     const nowAllDone = tasks.every((t) => next[t.id]);
     const wasAllDone = tasks.every((t) => checked[t.id]);
     if (nowAllDone && !wasAllDone && !completedDates.includes(dateKey)) {
@@ -151,6 +185,8 @@ export default function GuriQuestLog() {
       try { await window.storage.set("guri-completed-dates", JSON.stringify(nextDates)); } catch (e) {}
     }
   }
+  // Lets the timer finish a quest on its own without double-toggling something
+  // he already checked off manually.
   function completeViaTimer(id) { if (!checked[id]) toggle(id); }
 
   async function restoreFromCode() {
@@ -220,6 +256,24 @@ function TabBar({ tab, setTab }) {
   );
 }
 
+// Picks the colors for one quest card. Tasks with a timer get blue, tasks that
+// are just "check it off when it happens" (no timer field) get green. Pulling
+// this out of the .map() below instead of writing it all inline keeps that loop
+// readable - it's just five lines of color math, not the whole point of the loop.
+function getQuestColors(hasTimer, isChecked) {
+  const accent = hasTimer ? "#2E6FF2" : "#3DDC97";
+  const accentLight = hasTimer ? "#6FA8FF" : "#6FE3B4";
+  const accentSoft = hasTimer ? "rgba(46,111,242,0.08)" : "rgba(61,220,151,0.08)";
+  const uncheckedBorder = hasTimer ? "#1E2530" : "#17261F";
+  const uncheckedBg = hasTimer ? "#12161F" : "#0F1713";
+  return {
+    border: isChecked ? accent : uncheckedBorder,
+    background: isChecked ? accentSoft : uncheckedBg,
+    checkboxBorder: isChecked ? accent : (hasTimer ? "#3A4356" : "#2A4A3E"),
+    text: isChecked ? accentLight : null, // null means "use the normal unchecked text color"
+  };
+}
+
 // ---- TODAY tab -----------------------------------------------------
 function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared }) {
   return (
@@ -248,21 +302,17 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
         {tasks.map((t) => {
           const on = !!checked[t.id];
           const isFixed = !t.timer;
-          const accent = isFixed ? "#3DDC97" : "#2E6FF2";
-          const accentLight = isFixed ? "#6FE3B4" : "#6FA8FF";
-          const accentSoft = isFixed ? "rgba(61,220,151,0.08)" : "rgba(46,111,242,0.08)";
-          const uncheckedBorder = isFixed ? "#17261F" : "#1E2530";
-          const uncheckedBg = isFixed ? "#0F1713" : "#12161F";
+          const colors = getQuestColors(t.timer, on);
           return (
-            <div key={t.id} style={{ ...S.quest, borderColor: on ? accent : uncheckedBorder, background: on ? accentSoft : uncheckedBg }}>
+            <div key={t.id} style={{ ...S.quest, borderColor: colors.border, background: colors.background }}>
               <div style={{ display: "flex", gap: 12 }}>
                 <button onClick={() => toggle(t.id)} aria-label={on ? "Mark incomplete" : "Mark complete"}
-                  style={{ ...S.checkbox, borderColor: on ? accent : (isFixed ? "#2A4A3E" : "#3A4356"), background: on ? accent : "transparent", cursor: "pointer" }}>
+                  style={{ ...S.checkbox, borderColor: colors.checkboxBorder, background: on ? colors.checkboxBorder : "transparent", cursor: "pointer" }}>
                   {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
                 </button>
                 <div style={{ flex: 1, textAlign: "left" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ ...S.display, fontSize: 15, color: on ? accentLight : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
+                    <span style={{ ...S.display, fontSize: 15, color: colors.text || "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
                     <span style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
                       {isFixed && <span style={{ ...S.mono, fontSize: 8, color: "#3DDC97", letterSpacing: 0.5, border: "1px solid #2A4A3E", borderRadius: 4, padding: "1px 4px" }}>NO TIMER</span>}
                       <span style={{ ...S.mono, fontSize: 10, color: "#556075" }}>{t.time}</span>
@@ -270,8 +320,10 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
                   </div>
                   <p style={{ ...S.body, fontSize: 12.5, color: on ? "#556075" : "#8A94A8", margin: "5px 0 0", lineHeight: 1.5 }}>{t.desc}</p>
                 </div>
-                <span style={{ ...S.mono, fontSize: 10, color: on ? accentLight : "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
+                <span style={{ ...S.mono, fontSize: 10, color: colors.text || "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
               </div>
+              {/* Only show the timer if this task has one AND it isn't checked off yet -
+                  once it's done there's nothing left to count down. */}
               {t.timer && !on && <BlockTimer phases={t.timer} onFinish={() => completeViaTimer(t.id)} />}
             </div>
           );
@@ -370,16 +422,18 @@ function GuideTab() {
 
 // ---- CALENDAR tab -----------------------------------------------------
 function CalendarTab({ completedDates, todayKey }) {
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(0); // how many months forward/back from today
   const base = new Date();
   const viewDate = new Date(base.getFullYear(), base.getMonth() + offset, 1);
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const monthLabel = viewDate.toLocaleString("en-US", { month: "long", year: "numeric" });
-  const firstWeekday = new Date(year, month, 1).getDay();
+  const firstWeekday = new Date(year, month, 1).getDay(); // which weekday the 1st falls on, so I know how many blank cells to pad the grid with
+  // Little date trick: "day 0" of next month rolls back to the last day of THIS month.
+  // That's the easiest way in plain JS to find out how many days a month has.
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let i = 0; i < firstWeekday; i++) cells.push(null); // blank cells before day 1
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const completedSet = new Set(completedDates);
@@ -426,6 +480,14 @@ function SectionLabel({ text }) {
 }
 
 // ---- sequential block timer -----------------------------------------
+// A countdown that walks through multiple phases on its own (e.g. 60 min study,
+// then 20 min check, then 20 min rework) without needing a separate timer for each.
+//
+// The tricky part: this effect runs every time secondsLeft changes, checks if it
+// should stop/advance, and if not, schedules exactly one more "tick" a second later.
+// That's what makes it self-driving instead of needing setInterval managed from outside.
+// The cleanup function (the "return () => clearTimeout(id)" line) matters because
+// without it, every re-run would leave an old timeout still ticking in the background.
 function BlockTimer({ phases, onFinish }) {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(phases[0].minutes * 60);
@@ -437,9 +499,11 @@ function BlockTimer({ phases, onFinish }) {
     if (!running || done) return;
     if (secondsLeft <= 0) {
       if (phaseIndex + 1 < phases.length) {
+        // move to the next phase (e.g. Study Run -> Check & Sticky-Note)
         setPhaseIndex((p) => p + 1);
         setSecondsLeft(phases[phaseIndex + 1].minutes * 60);
       } else {
+        // that was the last phase - stop and auto-check the quest
         setRunning(false);
         setDone(true);
         onFinish && onFinish();
@@ -447,7 +511,7 @@ function BlockTimer({ phases, onFinish }) {
       return;
     }
     const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(id);
+    return () => clearTimeout(id); // cancel the old tick before scheduling a new one
   }, [running, secondsLeft, phaseIndex, done]);
 
   function reset() { setRunning(false); setDone(false); setPhaseIndex(0); setSecondsLeft(phases[0].minutes * 60); }
@@ -512,6 +576,10 @@ function NotesPanel({ notes, noteInput, setNoteInput, showNotes, setShowNotes, a
 }
 
 function BackupPanel({ completedDates, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }) {
+  // btoa() base64-encodes the JSON string so it's one copy-pasteable block of text.
+  // Important: this is just encoding, NOT encryption - anyone could decode it in two
+  // seconds with atob(). It's only here so his whole history can survive a future
+  // update to a new version of the app, not to keep the data secret.
   const code = btoa(JSON.stringify({ g: "guri", d: completedDates }));
   const [copyState, setCopyState] = useState("idle");
   async function copyCode() {
