@@ -3,32 +3,47 @@ import { useState, useEffect } from "react";
 // ---- schedule data -------------------------------------------------
 const WEEKDAY_TASKS = [
   {
+    id: "home", time: "—", title: "Home from school",
+    desc: "Snack, relax, decompress. No set length — just don't skip it.",
+    xp: 5,
+  },
+  {
     id: "block1", time: "100 min", title: "Block 1 — Study Run → Check → Rework",
     desc: "Closed-book work, then grade with the sticky-note trick, then rework misses before peeking at the answer.",
-    xp: 35, timer: [
+    xp: 30, timer: [
       { label: "Study Run — answer key CLOSED", minutes: 60 },
       { label: "Check & Sticky-Note misses", minutes: 20 },
       { label: "Instant Rework — before peeking", minutes: 20 },
     ],
   },
   {
-    id: "break1", time: "60 min", title: "Kindle / Phone break",
-    desc: "His choice how to split it — this is the combined cap for both, not an hour each.",
-    xp: 10, timer: [{ label: "Kindle or phone — your choice, combined cap", minutes: 60 }],
+    id: "phone", time: "60 min cap", title: "Phone",
+    desc: "Capped at an hour.",
+    xp: 10, timer: [{ label: "Phone — 60 min cap", minutes: 60 }],
+  },
+  {
+    id: "kindle", time: "1hr+", title: "Kindle",
+    desc: "At least an hour — more is great, no cap on this one.",
+    xp: 10,
   },
   {
     id: "block2", time: "100 min", title: "Block 2 — Study Run → Check → Rework",
     desc: "Same cycle as Block 1, new material.",
-    xp: 35, timer: [
+    xp: 30, timer: [
       { label: "Study Run — answer key CLOSED", minutes: 60 },
       { label: "Check & Sticky-Note misses", minutes: 20 },
       { label: "Instant Rework — before peeking", minutes: 20 },
     ],
   },
   {
+    id: "dinner", time: "30–60 min", title: "Dinner",
+    desc: "Whenever it's ready.",
+    xp: 5,
+  },
+  {
     id: "block3", time: "35 min", title: "Block 3 — Ghost Review (after dinner)",
     desc: "No new material. Only flip to pages with a sticky note and rework them. Fixed it? Rip it out.",
-    xp: 20, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 35 }],
+    xp: 10, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 35 }],
   },
 ];
 
@@ -219,24 +234,43 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
         </div>
       </div>
 
+      <div style={{ padding: "0 16px 10px", display: "flex", gap: 14 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 3, background: "#2E6FF2", display: "inline-block" }} />
+          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>timed block</span>
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 3, background: "#3DDC97", display: "inline-block" }} />
+          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>just check it off</span>
+        </span>
+      </div>
       <div style={{ padding: "0 16px" }}>
         {tasks.map((t) => {
           const on = !!checked[t.id];
+          const isFixed = !t.timer;
+          const accent = isFixed ? "#3DDC97" : "#2E6FF2";
+          const accentLight = isFixed ? "#6FE3B4" : "#6FA8FF";
+          const accentSoft = isFixed ? "rgba(61,220,151,0.08)" : "rgba(46,111,242,0.08)";
+          const uncheckedBorder = isFixed ? "#17261F" : "#1E2530";
+          const uncheckedBg = isFixed ? "#0F1713" : "#12161F";
           return (
-            <div key={t.id} style={{ ...S.quest, borderColor: on ? "#2E6FF2" : "#1E2530", background: on ? "rgba(46,111,242,0.08)" : "#12161F" }}>
+            <div key={t.id} style={{ ...S.quest, borderColor: on ? accent : uncheckedBorder, background: on ? accentSoft : uncheckedBg }}>
               <div style={{ display: "flex", gap: 12 }}>
                 <button onClick={() => toggle(t.id)} aria-label={on ? "Mark incomplete" : "Mark complete"}
-                  style={{ ...S.checkbox, borderColor: on ? "#2E6FF2" : "#3A4356", background: on ? "#2E6FF2" : "transparent", cursor: "pointer" }}>
+                  style={{ ...S.checkbox, borderColor: on ? accent : (isFixed ? "#2A4A3E" : "#3A4356"), background: on ? accent : "transparent", cursor: "pointer" }}>
                   {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
                 </button>
                 <div style={{ flex: 1, textAlign: "left" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ ...S.display, fontSize: 15, color: on ? "#8FA6C9" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
-                    <span style={{ ...S.mono, fontSize: 10, color: "#556075", whiteSpace: "nowrap" }}>{t.time}</span>
+                    <span style={{ ...S.display, fontSize: 15, color: on ? accentLight : "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                      {isFixed && <span style={{ ...S.mono, fontSize: 8, color: "#3DDC97", letterSpacing: 0.5, border: "1px solid #2A4A3E", borderRadius: 4, padding: "1px 4px" }}>NO TIMER</span>}
+                      <span style={{ ...S.mono, fontSize: 10, color: "#556075" }}>{t.time}</span>
+                    </span>
                   </div>
                   <p style={{ ...S.body, fontSize: 12.5, color: on ? "#556075" : "#8A94A8", margin: "5px 0 0", lineHeight: 1.5 }}>{t.desc}</p>
                 </div>
-                <span style={{ ...S.mono, fontSize: 10, color: on ? "#6FA8FF" : "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
+                <span style={{ ...S.mono, fontSize: 10, color: on ? accentLight : "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
               </div>
               {t.timer && !on && <BlockTimer phases={t.timer} onFinish={() => completeViaTimer(t.id)} />}
             </div>
@@ -248,7 +282,7 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
         <div style={S.psRow}>{["△", "○", "✕", "□"].map((s, i) => (<span key={i} style={{ ...S.psSym, color: allDone ? "#F2C14E" : "#3A4356", transition: "color 0.5s", transitionDelay: `${i * 0.1}s` }}>{s}</span>))}</div>
         <div style={{ ...S.display, fontSize: 22, letterSpacing: 2, marginTop: 10, color: allDone ? "#F2C14E" : "#556075" }}>{allDone ? "PS5 UNLOCKED" : "PS5 LOCKED"}</div>
         <p style={{ ...S.body, fontSize: 12.5, color: allDone ? "#C9B27A" : "#556075", margin: "6px 0 0" }}>
-          {allDone ? "Done for the day. It's yours — guilt-free. Nobody says a word." : `Clear ${tasks.length - doneCount} more quest${tasks.length - doneCount === 1 ? "" : "s"} → free play, no lectures.`}
+          {allDone ? "Done for the day. It's yours — guilt-free. Nobody says a word." : "It's still locked..."}
         </p>
       </div>
 
@@ -273,12 +307,12 @@ function ScheduleTab() {
   return (
     <div style={{ padding: "4px 16px 4px" }}>
       <SectionLabel text="MON – FRI (AFTER SCHOOL)" />
-      <Row n="1" title="Relax" sub="No set length. Snack, chill, decompress from school." />
+      <Row n="1" title="Home from school" sub="Snack, chill, decompress. No set length." />
       <Row n="2" title="Block 1 — 100 min" sub="60 Study Run (book closed) → 20 Check & sticky-note → 20 Instant Rework." />
-      <Row n="3" title="Kindle / Phone — 60 min" sub="Combined cap, his choice how to split it." />
-      <Row n="4" title="Block 2 — 100 min" sub="Same cycle as Block 1, new material." />
-      <Row n="5" title="Free time" sub="Whatever's left before dinner." />
-      <Row n="6" title="Dinner 8:30–9" sub="Fixed anchor." />
+      <Row n="3" title="Phone — 60 min cap" sub="Timed, capped at an hour." />
+      <Row n="4" title="Kindle — 1hr+" sub="No cap here. More reading is always good." />
+      <Row n="5" title="Block 2 — 100 min" sub="Same cycle as Block 1, new material." />
+      <Row n="6" title="Dinner — 30–60 min" sub="Whenever it's ready." />
       <Row n="7" title="Block 3 — 35 min" sub="Ghost Review only — no new material, just sticky-note pages." />
       <Row n="8" title="Kindle in bed → lights out" sub="Winds the day down on reading, not a screen." />
 
@@ -299,7 +333,7 @@ function ScheduleTab() {
       <div style={{ ...S.restRule, margin: "20px 0 4px" }}>
         <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⚠ THE DEAL</span>
         <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 13, lineHeight: 1.55 }}>
-          Work before games, every day. Clear the whole day's quests and the PS5 is yours — guilt-free, nobody says a word.
+          Work before games, every day. Clear the whole day's quests and the PS5 might be yours again.
         </p>
       </div>
     </div>
