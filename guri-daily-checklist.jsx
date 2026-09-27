@@ -1,11 +1,11 @@
 // Guri's SHSAT Quest Log
 // A daily checklist app I built for my younger brother while he preps for the SHSAT.
 // It swaps out what it shows based on the day of the week (school days vs. Khan's
-// tutoring days), runs a countdown timer that walks through his study method in
-// phases, and remembers his progress across days using a simple key-value store.
+// tutoring days), tracks his study sessions with real start/break/finish times,
+// and remembers his progress across days using a simple key-value store.
 //
 // Built with React (hooks only, no class components). Styled with plain JS style
-// objects instead of a CSS file, runs cleanly as a single file
+// objects instead of a CSS file, since that's what runs cleanly as a single file.
 
 import { useState, useEffect } from "react";
 
@@ -14,73 +14,43 @@ import { useState, useEffect } from "react";
 // it into the JSX. That way the rendering code below just loops over whichever list
 // applies to today - adding a new task later just means adding one object here, not
 // touching any component.
+// Each task is either:
+//   - a "session" task: has a Start / Break / Finish tracker that logs real times
+//     (goal = minutes to aim for, cap = a hard limit, used for phone time)
+//   - a plain check-off task: no session field, he just taps the box when it happens
 const WEEKDAY_TASKS = [
-  {
-    id: "home", time: "—", title: "Home from school",
-    desc: "Snack, relax. Do whatever",
-    xp: 5,
-  },
-  {
-    id: "block1", time: "100 min", title: "Block 1 — Study Run → Check → Rework",
-    desc: "Closed-book work, then grade with the sticky-note trick, then rework misses before peeking at the answer.",
-    xp: 30, timer: [
-      { label: "Study Run — answer key CLOSED", minutes: 60 },
-      { label: "Check & Sticky-Note misses", minutes: 20 },
-      { label: "Instant Rework — before peeking", minutes: 20 },
-    ],
-  },
-  {
-    id: "phone", time: "60 min cap", title: "Phone",
-    desc: "Capped at an hour.",
-    xp: 10, timer: [{ label: "Phone — 60 min cap", minutes: 60 }],
-  },
-  {
-    id: "kindle", time: "1hr+", title: "Kindle",
-    desc: "At least an hour — more is great, no cap on this one.",
-    xp: 10,
-  },
-  {
-    id: "block2", time: "100 min", title: "Block 2 — Study Run → Check → Rework",
-    desc: "Same cycle as Block 1, new material.",
-    xp: 30, timer: [
-      { label: "Study Run — answer key CLOSED", minutes: 60 },
-      { label: "Check & Sticky-Note misses", minutes: 20 },
-      { label: "Instant Rework — before peeking", minutes: 20 },
-    ],
-  },
-  {
-    id: "dinner", time: "30–60 min", title: "Dinner",
-    desc: "Whenever it's ready.",
-    xp: 5,
-  },
-  {
-    id: "block3", time: "35 min", title: "Block 3 — Ghost Review (after dinner)",
-    desc: "No new material. Only flip to pages with a sticky note and rework them. Fixed it? Rip it out.",
-    xp: 10, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 35 }],
-  },
+  { id: "home", time: "—", title: "Home from school", desc: "Snack, relax, decompress. No set length.", xp: 5 },
+  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check your answers every couple pages, post-it the ones you miss.", xp: 25, session: { kind: "goal", minutes: 90 } },
+  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 10, session: { kind: "cap", minutes: 60 } },
+  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour. More is great, no cap on this one.", xp: 10 },
+  { id: "block2", time: "~90 min", title: "Study Block 2", desc: "Same as Block 1, keep going where you left off.", xp: 25, session: { kind: "goal", minutes: 90 } },
+  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Whenever it's ready.", xp: 5 },
+  { id: "block3", time: "~45 min", title: "Study Block 3 (after dinner)", desc: "Shorter one. Finish the section you're on. Done by 10:30.", xp: 20, session: { kind: "goal", minutes: 45 } },
 ];
 
 const KHANS_SAT_TASKS = [
-  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Walk in with a fresh brain, not a fried one.", xp: 20 },
-  { id: "class", time: "10:00–1:30", title: "Khan's class", desc: "Lock in for the full session.", xp: 25 },
-  {
-    id: "homeblock", time: "75 min", title: "Home Block — Study Run → Check → Rework",
-    desc: "One full cycle after class, once he's home and eaten.",
-    xp: 35, timer: [
-      { label: "Study Run — answer key CLOSED", minutes: 45 },
-      { label: "Check & Sticky-Note misses", minutes: 15 },
-      { label: "Instant Rework — before peeking", minutes: 15 },
-    ],
-  },
-  {
-    id: "ghost", time: "25 min", title: "Ghost Review",
-    desc: "Flip only to sticky-note pages and rework them.",
-    xp: 20, timer: [{ label: "Ghost Review — sticky-note pages only", minutes: 25 }],
-  },
+  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Kindle in the morning is fine. Walk in with a fresh brain.", xp: 10 },
+  { id: "class", time: "10:00–1:30", title: "Khan's class", desc: "Lock in for the full session.", xp: 20 },
+  { id: "homeeat", time: "—", title: "Home, eat, relax", desc: "No set length.", xp: 5 },
+  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check every couple pages, post-it the misses.", xp: 25, session: { kind: "goal", minutes: 90 } },
+  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 5, session: { kind: "cap", minutes: 60 } },
+  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour, no cap.", xp: 10 },
+  { id: "block2", time: "~90 min", title: "Study Block 2", desc: "Keep going where you left off.", xp: 20, session: { kind: "goal", minutes: 90 } },
+  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Whenever it's ready. Rest of the night is free, done by 10:30.", xp: 5 },
 ];
-// Sunday's Khan's class is just Saturday's list with a different class time -
-// rather than copy/paste the whole array, I just clone it and swap that one field.
-const KHANS_SUN_TASKS = KHANS_SAT_TASKS.map((t) => (t.id === "class" ? { ...t, time: "11:00–2:00" } : t));
+
+// Sunday: different class time, and it's the one day for the weekly post-it redo.
+const KHANS_SUN_TASKS = [
+  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Kindle in the morning is fine. Walk in with a fresh brain.", xp: 10 },
+  { id: "class", time: "11:00–2:00", title: "Khan's class", desc: "Lock in for the full session.", xp: 15 },
+  { id: "homeeat", time: "—", title: "Home, eat, relax", desc: "No set length.", xp: 5 },
+  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check every couple pages, post-it the misses.", xp: 20, session: { kind: "goal", minutes: 90 } },
+  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 5, session: { kind: "cap", minutes: 60 } },
+  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour, no cap.", xp: 10 },
+  { id: "block2", time: "~60 min", title: "Study Block 2", desc: "Keep going where you left off.", xp: 15, session: { kind: "goal", minutes: 60 } },
+  { id: "postit", time: "~30 min", title: "Post-it Redo (weekly)", desc: "Flip to every page with a post-it and try it again. Got it? Rip it out. Missed it? It stays.", xp: 15, session: { kind: "goal", minutes: 30 } },
+  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Rest of the night is free, done by 10:30.", xp: 5 },
+];
 
 // getDay() returns 0-6 for Sunday-Saturday, so this object is basically a lookup
 // table: "if today is day X, use task list Y". Avoids a long if/else chain.
@@ -219,7 +189,7 @@ export default function GuriQuestLog() {
 
       {tab === "today" && (
         <TodayTab
-          {...{ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared }}
+          {...{ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared, dateKey }}
         />
       )}
       {tab === "schedule" && <ScheduleTab />}
@@ -256,8 +226,8 @@ function TabBar({ tab, setTab }) {
   );
 }
 
-// Picks the colors for one quest card. Tasks with a timer get blue, tasks that
-// are just "check it off when it happens" (no timer field) get green. Pulling
+// Picks the colors for one quest card. Tasks with a session tracker get blue, tasks that
+// are just "check it off when it happens" get green. Pulling
 // this out of the .map() below instead of writing it all inline keeps that loop
 // readable - it's just five lines of color math, not the whole point of the loop.
 function getQuestColors(hasTimer, isChecked) {
@@ -275,7 +245,7 @@ function getQuestColors(hasTimer, isChecked) {
 }
 
 // ---- TODAY tab -----------------------------------------------------
-function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared }) {
+function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared, dateKey }) {
   return (
     <>
       <div style={S.xpWrap}>
@@ -291,18 +261,19 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
       <div style={{ padding: "0 16px 10px", display: "flex", gap: 14 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 3, background: "#2E6FF2", display: "inline-block" }} />
-          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>timed block</span>
+          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>has a tracker</span>
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 3, background: "#3DDC97", display: "inline-block" }} />
           <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>just check it off</span>
         </span>
+        <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598", marginLeft: "auto" }}>🌙 done by 10:30</span>
       </div>
       <div style={{ padding: "0 16px" }}>
         {tasks.map((t) => {
           const on = !!checked[t.id];
-          const isFixed = !t.timer;
-          const colors = getQuestColors(t.timer, on);
+          const isFixed = !t.session;
+          const colors = getQuestColors(!!t.session, on);
           return (
             <div key={t.id} style={{ ...S.quest, borderColor: colors.border, background: colors.background }}>
               <div style={{ display: "flex", gap: 12 }}>
@@ -314,7 +285,7 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                     <span style={{ ...S.display, fontSize: 15, color: colors.text || "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
                     <span style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                      {isFixed && <span style={{ ...S.mono, fontSize: 8, color: "#3DDC97", letterSpacing: 0.5, border: "1px solid #2A4A3E", borderRadius: 4, padding: "1px 4px" }}>NO TIMER</span>}
+                      {isFixed && <span style={{ ...S.mono, fontSize: 8, color: "#3DDC97", letterSpacing: 0.5, border: "1px solid #2A4A3E", borderRadius: 4, padding: "1px 4px" }}>JUST CHECK</span>}
                       <span style={{ ...S.mono, fontSize: 10, color: "#556075" }}>{t.time}</span>
                     </span>
                   </div>
@@ -322,9 +293,17 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
                 </div>
                 <span style={{ ...S.mono, fontSize: 10, color: colors.text || "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
               </div>
-              {/* Only show the timer if this task has one AND it isn't checked off yet -
-                  once it's done there's nothing left to count down. */}
-              {t.timer && !on && <BlockTimer phases={t.timer} onFinish={() => completeViaTimer(t.id)} />}
+              {/* Session tracker. The key includes the date so every day starts fresh,
+                  and yesterday's log is still saved under yesterday's key. */}
+              {t.session && (
+                <SessionTracker
+                  storageKey={`guri-session:${dateKey}:${t.id}`}
+                  kind={t.session.kind}
+                  minutes={t.session.minutes}
+                  checked={on}
+                  onFinish={() => completeViaTimer(t.id)}
+                />
+              )}
             </div>
           );
         })}
@@ -359,28 +338,37 @@ function ScheduleTab() {
   return (
     <div style={{ padding: "4px 16px 4px" }}>
       <SectionLabel text="MON – FRI (AFTER SCHOOL)" />
-      <Row n="1" title="Home from school" sub="Snack, chill, decompress. No set length." />
-      <Row n="2" title="Block 1 — 100 min" sub="60 Study Run (book closed) → 20 Check & sticky-note → 20 Instant Rework." />
-      <Row n="3" title="Phone — 60 min cap" sub="Timed, capped at an hour." />
-      <Row n="4" title="Kindle — 1hr+" sub="No cap here. More reading is always good." />
-      <Row n="5" title="Block 2 — 100 min" sub="Same cycle as Block 1, new material." />
-      <Row n="6" title="Dinner — 30–60 min" sub="Whenever it's ready." />
-      <Row n="7" title="Block 3 — 35 min" sub="Ghost Review only — no new material, just sticky-note pages." />
-      <Row n="8" title="Kindle in bed → lights out" sub="Winds the day down on reading, not a screen." />
+      <Row n="1" title="Home from school" sub="Snack, chill, decompress." />
+      <Row n="2" title="Study Block 1 — ~90 min" />
+      <Row n="3" title="Phone — 60 min max" />
+      <Row n="4" title="Kindle — 1hr+" />
+      <Row n="5" title="Study Block 2 — ~90 min" />
+      <Row n="6" title="Dinner — 30–60 min" />
+      <Row n="7" title="Study Block 3 — ~45 min" sub="Shorter one after dinner." />
+      <Row n="8" title="Done by 10:30" sub="Kindle in bed is fine, then lights out." />
 
       <div style={{ height: 18 }} />
       <SectionLabel text="SATURDAY" />
-      <Row n="1" title="No phone before class" sub="Fresh brain walking in." />
+      <Row n="1" title="No phone before class" sub="Kindle in the morning is fine." />
       <Row n="2" title="Khan's — 10:00–1:30" />
-      <Row n="3" title="Home Block — 75 min" sub="45 Study Run → 15 Check → 15 Rework." />
-      <Row n="4" title="Ghost Review — 25 min" />
+      <Row n="3" title="Home, eat, relax" />
+      <Row n="4" title="Study Block 1 — ~90 min" />
+      <Row n="5" title="Phone — 60 min max" />
+      <Row n="6" title="Kindle — 1hr+" />
+      <Row n="7" title="Study Block 2 — ~90 min" />
+      <Row n="8" title="Dinner, then free until 10:30" />
 
       <div style={{ height: 18 }} />
       <SectionLabel text="SUNDAY" />
-      <Row n="1" title="No phone before class" sub="Fresh brain walking in." />
+      <Row n="1" title="No phone before class" sub="Kindle in the morning is fine." />
       <Row n="2" title="Khan's — 11:00–2:00" />
-      <Row n="3" title="Home Block — 75 min" sub="45 Study Run → 15 Check → 15 Rework." />
-      <Row n="4" title="Ghost Review — 25 min" />
+      <Row n="3" title="Home, eat, relax" />
+      <Row n="4" title="Study Block 1 — ~90 min" />
+      <Row n="5" title="Phone — 60 min max" />
+      <Row n="6" title="Kindle — 1hr+" />
+      <Row n="7" title="Study Block 2 — ~60 min" />
+      <Row n="8" title="Post-it Redo — ~30 min" sub="Once a week. Every post-it page, try it again." />
+      <Row n="9" title="Dinner, then free until 10:30" />
 
       <div style={{ ...S.restRule, margin: "20px 0 4px" }}>
         <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⚠ THE DEAL</span>
@@ -393,6 +381,8 @@ function ScheduleTab() {
 }
 
 // ---- STICKY NOTES guide tab -----------------------------------------
+// Kept this short on purpose. The first version had 5 steps and a nightly review,
+// and it was too much to remember mid-study. This is the version he actually does.
 function GuideTab() {
   const Step = ({ n, title, desc, tip }) => (
     <div style={S.guideCard}>
@@ -409,13 +399,12 @@ function GuideTab() {
   return (
     <div style={{ padding: "4px 16px 4px" }}>
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "4px 0 16px" }}>
-        This is how to check your Kaplan pages without the constant flip-flip-flipping. It's the whole error-log system — do it this way and you don't need a separate notebook.
+        How to check your Kaplan work. Three steps, that's it.
       </p>
-      <Step n="1" title="Study Run" desc="Do the pages exactly like normal. The rule: answer key stays completely closed. No peeking until the whole section's done." />
-      <Step n="2" title="Check & Sticky-Note" desc="Open the answer key and grade. Got it right? Leave it, move on. Got it wrong? Grab a sticky note, write the correct letter (A/B/C/D) on the sticky side, and tape it right over Kaplan's explanation — completely blocking it." />
-      <Step n="3" title="Instant Rework" desc="Before moving to new pages, go back to everything you missed. The answer's hidden under the sticky note, so you have to actually solve it again on scrap paper." tip="This step is the whole point — re-solving it yourself sticks way better than just reading why you were wrong." />
-      <Step n="4" title="Reveal & Log" desc="Lift the sticky note. Got it right this time? Flip it over and write one line on the front — like 'missed the negative sign' or 'underline the main idea.' Leave the note in the book." />
-      <Step n="5" title="Ghost Review (later)" desc="During a Ghost Review block, only open pages that still have a sticky note. Try the question again. Nail it easily? Rip the sticky out, it's dead. Miss it again? It stays for next time." tip="The sticky note is the error log. Once it's ripped out, that mistake is actually fixed." />
+      <Step n="1" title="Do a couple pages" desc="Answer key closed while you work. Finish 2–3 pages before you check anything." tip="Don't check after every single question. On the real test you can't go back and change answers, so practice committing to one and moving on." />
+      <Step n="2" title="Check right away" desc="Flip to the answer key. Got one wrong? Read the explanation until you actually get WHY, not just what the right letter is." />
+      <Step n="3" title="Post-it it" desc="Stick a post-it on the question you missed. Write one line on it: what you messed up. Like 'forgot the negative sign' or 'didn't reread the question.'" />
+      <Step n="★" title="Sunday: Post-it Redo" desc="Once a week, go through every page with a post-it and try the question again. Got it? Rip the post-it out, it's fixed. Missed it again? It stays for next Sunday." />
     </div>
   );
 }
@@ -479,67 +468,151 @@ function SectionLabel({ text }) {
   return <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "2px 0 10px" }}>{text}</div>;
 }
 
-// ---- sequential block timer -----------------------------------------
-// A countdown that walks through multiple phases on its own (e.g. 60 min study,
-// then 20 min check, then 20 min rework) without needing a separate timer for each.
-//
-// The tricky part: this effect runs every time secondsLeft changes, checks if it
-// should stop/advance, and if not, schedules exactly one more "tick" a second later.
-// That's what makes it self-driving instead of needing setInterval managed from outside.
-// The cleanup function (the "return () => clearTimeout(id)" line) matters because
-// without it, every re-run would leave an old timeout still ticking in the background.
-function BlockTimer({ phases, onFinish }) {
-  const [phaseIndex, setPhaseIndex] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(phases[0].minutes * 60);
-  const [running, setRunning] = useState(false);
-  const [done, setDone] = useState(false);
-  const untouched = phaseIndex === 0 && secondsLeft === phases[0].minutes * 60;
+// ---- session tracker -------------------------------------------------
+// Replaced the old countdown timer. That one ran on setTimeout, which phones pause
+// when the screen turns off, so it would freeze or lose time. This version never
+// "counts" anything. It just saves timestamps (when he started, took a break, came
+// back, finished) and figures out the elapsed time from the clock whenever it draws.
+// So the screen can lock, the app can close, and the numbers are still right
+// when he comes back.
+function SessionTracker({ storageKey, kind, minutes, checked, onFinish }) {
+  const [log, setLog] = useState([]); // e.g. [{ type: "start", at: 1726... }, { type: "break", at: ... }]
+  const [now, setNow] = useState(Date.now());
+  const [loaded, setLoaded] = useState(false);
 
+  // load this session's saved log (if any) when the tracker first shows up
   useEffect(() => {
-    if (!running || done) return;
-    if (secondsLeft <= 0) {
-      if (phaseIndex + 1 < phases.length) {
-        // move to the next phase (e.g. Study Run -> Check & Sticky-Note)
-        setPhaseIndex((p) => p + 1);
-        setSecondsLeft(phases[phaseIndex + 1].minutes * 60);
-      } else {
-        // that was the last phase - stop and auto-check the quest
-        setRunning(false);
-        setDone(true);
-        onFinish && onFinish();
-      }
-      return;
-    }
-    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(id); // cancel the old tick before scheduling a new one
-  }, [running, secondsLeft, phaseIndex, done]);
+    (async () => {
+      try {
+        const r = await window.storage.get(storageKey);
+        if (r?.value) setLog(JSON.parse(r.value));
+      } catch (e) {}
+      setLoaded(true);
+    })();
+  }, [storageKey]);
 
-  function reset() { setRunning(false); setDone(false); setPhaseIndex(0); setSecondsLeft(phases[0].minutes * 60); }
-  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
-  const ss = String(secondsLeft % 60).padStart(2, "0");
+  const last = log.length ? log[log.length - 1].type : null;
+  const status = !last ? "idle" : last === "finish" ? "done" : last === "break" ? "break" : "working";
+
+  // Only job of this interval: redraw once a second so the numbers move.
+  // If the phone pauses it, nothing is lost, since the math uses timestamps.
+  useEffect(() => {
+    if (status !== "working" && status !== "break") return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  async function addEvent(type) {
+    const next = [...log, { type, at: Date.now() }];
+    setLog(next);
+    setNow(Date.now());
+    try { await window.storage.set(storageKey, JSON.stringify(next)); } catch (e) {}
+    if (type === "finish") onFinish && onFinish();
+  }
+  async function reset() {
+    setLog([]);
+    try { await window.storage.set(storageKey, JSON.stringify([])); } catch (e) {}
+  }
+
+  if (!loaded) return null;
+  // If he checked it off by hand without ever starting the tracker, hide it.
+  if (checked && status === "idle") return null;
+
+  const { workMs, breakMs, breakCount } = sumSession(log, now);
+  const goalMs = minutes * 60 * 1000;
+  const isCap = kind === "cap";
+  const pctDone = Math.min(100, (workMs / goalMs) * 100);
+  const capLeft = goalMs - workMs;
+
+  const bigLabel = isCap ? (capLeft > 0 ? "LEFT" : "TIME'S UP") : "STUDIED";
+  const bigValue = isCap ? formatDuration(Math.max(0, capLeft)) : formatDuration(workMs);
+  const bigColor = isCap && capLeft <= 0 ? "#E06C6C" : status === "working" ? "#6FA8FF" : "#C9D2E0";
 
   return (
     <div style={S.timerBox}>
-      {done ? (
-        <div style={{ ...S.mono, fontSize: 11.5, color: "#F2C14E", textAlign: "center" }}>✓ Timer complete — quest checked off</div>
-      ) : (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ ...S.mono, fontSize: 10, color: "#7A8598", letterSpacing: 0.5 }}>PHASE {phaseIndex + 1}/{phases.length} · {phases[phaseIndex].label}</span>
-            <span style={{ ...S.display, fontSize: 17, color: running ? "#6FA8FF" : "#C9D2E0" }}>{mm}:{ss}</span>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            {!running ? (
-              <button onClick={() => setRunning(true)} style={S.timerBtnPrimary}>{untouched ? "▶ Start Timer" : "▶ Resume"}</button>
-            ) : (
-              <button onClick={() => setRunning(false)} style={S.timerBtnPrimary}>⏸ Pause</button>
-            )}
-            {!untouched && <button onClick={reset} style={S.timerBtnGhost}>↺ Reset</button>}
-          </div>
-        </>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.mono, fontSize: 10, color: "#7A8598", letterSpacing: 0.5 }}>
+          {bigLabel}
+          {status === "break" && <span style={{ color: "#F2C14E" }}> · ON BREAK</span>}
+        </span>
+        <span style={{ ...S.display, fontSize: 20, color: bigColor }}>{bigValue}</span>
+      </div>
+
+      {/* progress toward the goal (or how much of the cap is used) */}
+      <div style={{ ...S.xpTrack, height: 5, marginTop: 7 }}>
+        <div style={{ height: "100%", width: `${pctDone}%`, background: isCap ? (capLeft <= 0 ? "#E06C6C" : "#6FA8FF") : pctDone >= 100 ? "#F2C14E" : "#2E6FF2", transition: "width 0.4s" }} />
+      </div>
+      <div style={{ ...S.mono, fontSize: 9.5, color: "#556075", marginTop: 5 }}>
+        {isCap ? `${minutes} min max` : pctDone >= 100 ? `goal hit ✓ — finish at a good stopping point` : `goal ${minutes} min`}
+        {breakCount > 0 && ` · ${breakCount} break${breakCount === 1 ? "" : "s"} (${formatDuration(breakMs)})`}
+      </div>
+
+      {/* buttons change depending on where he is in the session */}
+      {status !== "done" && (
+        <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
+          {status === "idle" && <button onClick={() => addEvent("start")} style={S.timerBtnPrimary}>▶ Start</button>}
+          {status === "working" && (
+            <button onClick={() => addEvent("break")} style={S.timerBtnBreak}>{isCap ? "⏸ Pause" : "☕ Break"}</button>
+          )}
+          {status === "break" && <button onClick={() => addEvent("resume")} style={S.timerBtnPrimary}>▶ Back to it</button>}
+          {status !== "idle" && <button onClick={() => addEvent("finish")} style={S.timerBtnGhost}>■ {isCap ? "Done" : "Finish"}</button>}
+        </div>
+      )}
+
+      {/* the actual time log */}
+      {log.length > 0 && (
+        <div style={{ marginTop: 9 }}>
+          {log.map((e, i) => (
+            <div key={i} style={{ ...S.mono, fontSize: 10, color: "#7A8598", lineHeight: 1.7 }}>
+              {EVENT_LABELS[e.type]} {formatClock(e.at)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === "done" && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+          <span style={{ ...S.mono, fontSize: 10.5, color: "#F2C14E" }}>✓ Logged</span>
+          <button onClick={reset} style={{ ...S.mono, fontSize: 10, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: 0 }}>↺ reset</button>
+        </div>
       )}
     </div>
   );
+}
+
+const EVENT_LABELS = { start: "▶ started", break: "☕ break", resume: "▶ back", finish: "■ finished" };
+
+// Walks the log in order and adds up working time vs. break time.
+// "now" is used for whatever's still in progress (the current work or break stretch).
+function sumSession(log, now) {
+  let workMs = 0, breakMs = 0, breakCount = 0;
+  let mode = null, since = 0;
+  for (const e of log) {
+    if (mode === "work") workMs += e.at - since;
+    if (mode === "break") breakMs += e.at - since;
+    if (e.type === "start" || e.type === "resume") mode = "work";
+    else if (e.type === "break") { mode = "break"; breakCount++; }
+    else if (e.type === "finish") mode = null;
+    since = e.at;
+  }
+  if (mode === "work") workMs += now - since;
+  if (mode === "break") breakMs += now - since;
+  return { workMs, breakMs, breakCount };
+}
+
+// 5025000 ms -> "1:23:45", 125000 -> "2:05"
+function formatDuration(ms) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function formatClock(ms) {
+  return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function NotesPanel({ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }) {
@@ -664,6 +737,7 @@ const S = {
   toast: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg,#F2C14E,#FFDD87)", padding: "11px 20px", borderRadius: 30, animation: "toastIn 0.35s ease", zIndex: 50, whiteSpace: "nowrap", boxShadow: "0 6px 24px rgba(242,193,78,0.35)" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
   timerBtnPrimary: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#6FA8FF", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
+  timerBtnBreak: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#F2C14E", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
   timerBtnGhost: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#7A8598", background: "transparent", border: "1px solid #2A3242", borderRadius: 8, padding: "8px 12px", cursor: "pointer" },
   schedRow: { display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" },
   schedNum: { width: 22, height: 22, minWidth: 22, borderRadius: 6, background: "#161B26", border: "1px solid #2A3242", color: "#6FA8FF", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 },
