@@ -1,83 +1,112 @@
 // Guri's SHSAT Quest Log
-// A daily checklist app I built for my younger brother while he preps for the SHSAT.
-// It swaps out what it shows based on the day of the week (school days vs. Khan's
-// tutoring days), tracks his study sessions with real start/break/finish times,
-// and remembers his progress across days using a simple key-value store.
+// A daily tracker app I built for my younger brother while he preps for the SHSAT.
+// It tracks how long he actually studied and how long he was on his phone (using real
+// start/stop times, so it survives the screen locking), has a few simple checkboxes,
+// and unlocks his PS5 once he hits the day's study goal.
 //
 // Built with React (hooks only, no class components). Styled with plain JS style
 // objects instead of a CSS file, since that's what runs cleanly as a single file.
+//
+// Version 2: the first version had a checkbox + timer for every block of the day,
+// and it was too much for him to keep track of. This version only tracks what
+// actually matters: study time, phone time, and whether he checked his answers.
 
 import { useState, useEffect } from "react";
 
-// ---- schedule data -------------------------------------------------
-// I keep the actual schedule as plain data (arrays of objects) instead of hard-coding
-// it into the JSX. That way the rendering code below just loops over whichever list
-// applies to today - adding a new task later just means adding one object here, not
-// touching any component.
-// Each task is either:
-//   - a "session" task: has a Start / Break / Finish tracker that logs real times
-//     (goal = minutes to aim for, cap = a hard limit, used for phone time)
-//   - a plain check-off task: no session field, he just taps the box when it happens
-const WEEKDAY_TASKS = [
-  { id: "home", time: "—", title: "Home from school", desc: "Snack, relax, decompress. No set length.", xp: 5 },
-  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check your answers every couple pages, post-it the ones you miss.", xp: 25, session: { kind: "goal", minutes: 90 } },
-  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 10, session: { kind: "cap", minutes: 60 } },
-  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour. More is great, no cap on this one.", xp: 10 },
-  { id: "block2", time: "~90 min", title: "Study Block 2", desc: "Same as Block 1, keep going where you left off.", xp: 25, session: { kind: "goal", minutes: 90 } },
-  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Whenever it's ready.", xp: 5 },
-  { id: "block3", time: "~45 min", title: "Study Block 3 (after dinner)", desc: "Shorter one. Finish the section you're on. Done by 10:30.", xp: 20, session: { kind: "goal", minutes: 45 } },
-];
+// ---- the plan for each kind of day -----------------------------------
+// studyGoal is in minutes. checks are the plain checkboxes for that day.
+const CHECK_ANSWERS = { id: "checked", title: "Checked my answers", desc: "Every couple pages. Wrong ones got a post-it with one line on why." };
+const KINDLE = { id: "kindle", title: "Kindle 1hr+", desc: "No cap on this one, more is great." };
+const NO_PHONE_MORNING = { id: "nophone", title: "No phone before Khan's", desc: "Kindle in the morning is fine." };
 
-const KHANS_SAT_TASKS = [
-  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Kindle in the morning is fine. Walk in with a fresh brain.", xp: 10 },
-  { id: "class", time: "10:00–1:30", title: "Khan's class", desc: "Lock in for the full session.", xp: 20 },
-  { id: "homeeat", time: "—", title: "Home, eat, relax", desc: "No set length.", xp: 5 },
-  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check every couple pages, post-it the misses.", xp: 25, session: { kind: "goal", minutes: 90 } },
-  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 5, session: { kind: "cap", minutes: 60 } },
-  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour, no cap.", xp: 10 },
-  { id: "block2", time: "~90 min", title: "Study Block 2", desc: "Keep going where you left off.", xp: 20, session: { kind: "goal", minutes: 90 } },
-  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Whenever it's ready. Rest of the night is free, done by 10:30.", xp: 5 },
-];
+const DAY_PLANS = {
+  weekday: { label: "SCHOOL DAY", studyGoal: 210, checks: [CHECK_ANSWERS, KINDLE] },
+  khans_sat: {
+    label: "KHAN'S DAY", studyGoal: 180,
+    checks: [NO_PHONE_MORNING, { id: "class", title: "Khan's class", desc: "10:00–1:30. Lock in for the whole thing." }, CHECK_ANSWERS, KINDLE],
+  },
+  khans_sun: {
+    label: "KHAN'S DAY", studyGoal: 180,
+    checks: [
+      NO_PHONE_MORNING,
+      { id: "class", title: "Khan's class", desc: "11:00–2:00. Lock in for the whole thing." },
+      CHECK_ANSWERS,
+      { id: "postit", title: "Post-it redo (weekly)", desc: "Every page with a post-it, try it again. Got it? Rip it out." },
+      KINDLE,
+    ],
+  },
+};
 
-// Sunday: different class time, and it's the one day for the weekly post-it redo.
-const KHANS_SUN_TASKS = [
-  { id: "nophone", time: "morning", title: "No phone before Khan's", desc: "Kindle in the morning is fine. Walk in with a fresh brain.", xp: 10 },
-  { id: "class", time: "11:00–2:00", title: "Khan's class", desc: "Lock in for the full session.", xp: 15 },
-  { id: "homeeat", time: "—", title: "Home, eat, relax", desc: "No set length.", xp: 5 },
-  { id: "block1", time: "~90 min", title: "Study Block 1", desc: "Kaplan pages. Check every couple pages, post-it the misses.", xp: 20, session: { kind: "goal", minutes: 90 } },
-  { id: "phone", time: "60 min max", title: "Phone", desc: "Capped at an hour.", xp: 5, session: { kind: "cap", minutes: 60 } },
-  { id: "kindle", time: "1hr+", title: "Kindle", desc: "At least an hour, no cap.", xp: 10 },
-  { id: "block2", time: "~60 min", title: "Study Block 2", desc: "Keep going where you left off.", xp: 15, session: { kind: "goal", minutes: 60 } },
-  { id: "postit", time: "~30 min", title: "Post-it Redo (weekly)", desc: "Flip to every page with a post-it and try it again. Got it? Rip it out. Missed it? It stays.", xp: 15, session: { kind: "goal", minutes: 30 } },
-  { id: "dinner", time: "30–60 min", title: "Dinner", desc: "Rest of the night is free, done by 10:30.", xp: 5 },
-];
+const PHONE_AIM_MIN = 120; // try to stay under this
+const PHONE_CAP_MIN = 150; // hard max
 
-// getDay() returns 0-6 for Sunday-Saturday, so this object is basically a lookup
-// table: "if today is day X, use task list Y". Avoids a long if/else chain.
+// getDay() returns 0-6 for Sunday-Saturday, so this is a lookup table for which plan to use.
 const DAY_TYPES = { 0: "khans_sun", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday", 5: "weekday", 6: "khans_sat" };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
 
-function getTasks(dayType) {
-  if (dayType === "weekday") return WEEKDAY_TASKS;
-  if (dayType === "khans_sat") return KHANS_SAT_TASKS;
-  return KHANS_SUN_TASKS;
-}
-// Turns a Date into "2026-09-15" so it can be used as a storage key. I build this
-// by hand instead of using .toISOString() because that converts to UTC first,
-// which can roll the date over to the wrong day depending on the time and timezone.
+// Turns a Date into "2026-09-15" so it can be used as a storage key. Built by hand
+// instead of .toISOString() because that converts to UTC first, which can roll the
+// date over to the wrong day late at night.
 function dateKeyFor(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// ---- time tracking helpers --------------------------------------------
+// A timer's log is just a list of { type: "start" | "stop", at: timestamp }.
+// Nothing ever "counts" - the total is worked out from the timestamps every time
+// it's drawn. That's why the phone locking or the app closing can't lose time.
+function isRunning(log) {
+  return log.length > 0 && log[log.length - 1].type === "start";
+}
+function totalMs(log, now) {
+  let total = 0, startedAt = null;
+  for (const e of log) {
+    if (e.type === "start") startedAt = e.at;
+    else if (e.type === "stop" && startedAt !== null) { total += e.at - startedAt; startedAt = null; }
+  }
+  if (startedAt !== null) total += now - startedAt; // still running
+  return total;
+}
+// Turns the start/stop list into sessions like { start, end } for the log at the bottom.
+function toSessions(log, which) {
+  const out = [];
+  for (const e of log) {
+    if (e.type === "start") out.push({ which, start: e.at, end: null });
+    else if (out.length && out[out.length - 1].end === null) out[out.length - 1].end = e.at;
+  }
+  return out;
+}
+// 5025000 ms -> "1:23:45", 125000 -> "2:05"
+function formatDuration(ms) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+// For goals: 210 -> "3h 30m"
+function formatGoal(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+function formatClock(ms) {
+  return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+const SPAM_TAPS = 5;        // this many start/stop taps...
+const SPAM_WINDOW = 60000;  // ...inside one minute = he's just messing with the buttons
+
 // ---- root component --------------------------------------------------
 export default function GuriQuestLog() {
-  // All the shared state lives here and gets passed down as props. The app is
-  // small enough that I didn't need Context or a state library - just one
-  // component owning everything and handing pieces to its children.
+  // All the shared state lives here and gets passed down as props. The app is small
+  // enough that I didn't need Context or a state library.
   const [tab, setTab] = useState("today");
-  const [checked, setChecked] = useState({});           // today's checkboxes, e.g. { block1: true }
-  const [completedDates, setCompletedDates] = useState([]); // every "YYYY-MM-DD" he's fully cleared
+  const [checked, setChecked] = useState({});                 // today's checkboxes, e.g. { kindle: true }
+  const [times, setTimes] = useState({ study: [], phone: [] }); // today's timer logs
+  const [now, setNow] = useState(Date.now());
+  const [completedDates, setCompletedDates] = useState([]);   // every "YYYY-MM-DD" he fully cleared
   const [loaded, setLoaded] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
@@ -87,33 +116,89 @@ export default function GuriQuestLog() {
   const [noteInput, setNoteInput] = useState("");
   const [showNotes, setShowNotes] = useState(false);
 
-  const now = new Date();
-  const dayType = DAY_TYPES[now.getDay()];
-  const dayName = DAY_NAMES[now.getDay()];
-  const dateKey = dateKeyFor(now);
-  const tasks = getTasks(dayType);
-  const monthName = now.toLocaleString("en-US", { month: "long" }).toUpperCase();
-  const sectionLabel = dayType === "weekday" ? "AFTER-SCHOOL QUESTS" : "KHAN'S DAY";
+  const today = new Date();
+  const dayType = DAY_TYPES[today.getDay()];
+  const dayName = DAY_NAMES[today.getDay()];
+  const dateKey = dateKeyFor(today);
+  const plan = DAY_PLANS[dayType];
+  const monthName = today.toLocaleString("en-US", { month: "long" }).toUpperCase();
   const daysCleared = completedDates.length;
 
-  // Runs once when the component first mounts, and again whenever dateKey changes
-  // (i.e. it becomes a new day). That's how today's checkboxes reset automatically
-  // without me writing any "is it a new day" logic myself - React just re-runs this
-  // whenever the value in the dependency array is different from last time.
+  // Load everything for today. Re-runs if the date changes, which is how the
+  // day resets on its own.
   useEffect(() => {
     (async () => {
       try { const r = await window.storage.get(`guri-day:${dateKey}`); if (r?.value) setChecked(JSON.parse(r.value)); } catch (e) {}
+      try { const t = await window.storage.get(`guri-times:${dateKey}`); if (t?.value) setTimes(JSON.parse(t.value)); } catch (e) {}
       try { const c = await window.storage.get("guri-completed-dates"); if (c?.value) setCompletedDates(JSON.parse(c.value)); } catch (e) {}
       try { const n = await window.storage.get("guri-notes"); if (n?.value) setNotes(JSON.parse(n.value)); } catch (e) {}
       setLoaded(true);
     })();
   }, [dateKey]);
 
-  const doneCount = tasks.filter((t) => checked[t.id]).length;
-  const totalXP = tasks.reduce((a, t) => a + t.xp, 0);
-  const earnedXP = tasks.reduce((a, t) => a + (checked[t.id] ? t.xp : 0), 0);
-  const pct = Math.round((earnedXP / totalXP) * 100);
-  const allDone = doneCount === tasks.length;
+  // derived numbers - always computed fresh from the logs, never stored
+  const studyMs = totalMs(times.study, now);
+  const phoneMs = totalMs(times.phone, now);
+  const studyGoalMs = plan.studyGoal * 60000;
+  const studyDone = studyMs >= studyGoalMs;
+  const checksDone = plan.checks.every((c) => checked[c.id]);
+  const allDone = studyDone && checksDone;
+  const anyRunning = isRunning(times.study) || isRunning(times.phone);
+
+  const recentTaps = [...times.study, ...times.phone].filter((e) => now - e.at < SPAM_WINDOW).length;
+  const spamming = recentTaps >= SPAM_TAPS;
+
+  // Redraw once a second while a timer runs (or while the spam warning is up,
+  // so it goes away on its own). Purely for display - the math uses timestamps.
+  useEffect(() => {
+    if (!anyRunning && !spamming) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [anyRunning, spamming]);
+
+  // Keep the calendar's list of cleared days in sync with whether today is done.
+  // This is an effect (not inside a click handler) because the study goal can get
+  // hit just by time passing, without him tapping anything.
+  useEffect(() => {
+    if (!loaded) return;
+    const inList = completedDates.includes(dateKey);
+    if (allDone && !inList) {
+      const next = [...completedDates, dateKey];
+      setCompletedDates(next);
+      setJustUnlocked(true);
+      setTimeout(() => setJustUnlocked(false), 2400);
+      window.storage.set("guri-completed-dates", JSON.stringify(next)).catch(() => {});
+    } else if (!allDone && inList) {
+      const next = completedDates.filter((d) => d !== dateKey);
+      setCompletedDates(next);
+      window.storage.set("guri-completed-dates", JSON.stringify(next)).catch(() => {});
+    }
+  }, [allDone, loaded, dateKey]);
+
+  // Start or stop one of the timers. Starting study automatically stops the
+  // phone timer and vice versa - he can't be doing both at once.
+  async function toggleTimer(which) {
+    const t = Date.now();
+    const other = which === "study" ? "phone" : "study";
+    const next = { ...times };
+    if (isRunning(times[which])) {
+      next[which] = [...times[which], { type: "stop", at: t }];
+    } else {
+      if (isRunning(times[other])) next[other] = [...times[other], { type: "stop", at: t }];
+      next[which] = [...times[which], { type: "start", at: t }];
+    }
+    setTimes(next);
+    setNow(t);
+    try { await window.storage.set(`guri-times:${dateKey}`, JSON.stringify(next)); } catch (e) {}
+  }
+
+  // Flip one checkbox. Spread into a brand new object instead of changing the old
+  // one, because React only notices a change when it gets a different object.
+  async function toggleCheck(id) {
+    const next = { ...checked, [id]: !checked[id] };
+    setChecked(next);
+    try { await window.storage.set(`guri-day:${dateKey}`, JSON.stringify(next)); } catch (e) {}
+  }
 
   async function saveNotes(next) {
     setNotes(next);
@@ -128,36 +213,6 @@ export default function GuriQuestLog() {
     setNoteInput("");
   }
   function deleteNote(id) { saveNotes(notes.filter((n) => n.id !== id)); }
-
-  // Flips one quest's checked state and saves it. The { ...checked, [id]: ... }
-  // part matters more than it looks - React decides whether to redraw by checking
-  // if it got a *different* object, not by looking inside the old one. So I always
-  // build a brand new object here instead of doing checked[id] = true directly.
-  async function toggle(id) {
-    const next = { ...checked, [id]: !checked[id] };
-    setChecked(next);
-    try { await window.storage.set(`guri-day:${dateKey}`, JSON.stringify(next)); } catch (e) {}
-
-    // Check if this toggle just finished (or un-finished) the whole day, and keep
-    // the completedDates list in sync so the calendar tab and the streak count
-    // never disagree with each other.
-    const nowAllDone = tasks.every((t) => next[t.id]);
-    const wasAllDone = tasks.every((t) => checked[t.id]);
-    if (nowAllDone && !wasAllDone && !completedDates.includes(dateKey)) {
-      const nextDates = [...completedDates, dateKey];
-      setCompletedDates(nextDates);
-      setJustUnlocked(true);
-      try { await window.storage.set("guri-completed-dates", JSON.stringify(nextDates)); } catch (e) {}
-      setTimeout(() => setJustUnlocked(false), 2400);
-    } else if (!nowAllDone && wasAllDone && completedDates.includes(dateKey)) {
-      const nextDates = completedDates.filter((d) => d !== dateKey);
-      setCompletedDates(nextDates);
-      try { await window.storage.set("guri-completed-dates", JSON.stringify(nextDates)); } catch (e) {}
-    }
-  }
-  // Lets the timer finish a quest on its own without double-toggling something
-  // he already checked off manually.
-  function completeViaTimer(id) { if (!checked[id]) toggle(id); }
 
   async function restoreFromCode() {
     try {
@@ -176,7 +231,7 @@ export default function GuriQuestLog() {
     return (
       <div style={S.shell}>
         <style>{FONTS}</style>
-        <div style={{ ...S.mono, color: "#7A8598", padding: 40, textAlign: "center" }}>loading quest log…</div>
+        <div style={{ ...S.mono, color: "#7A8598", padding: 40, textAlign: "center" }}>loading…</div>
       </div>
     );
   }
@@ -188,9 +243,7 @@ export default function GuriQuestLog() {
       <TabBar tab={tab} setTab={setTab} />
 
       {tab === "today" && (
-        <TodayTab
-          {...{ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared, dateKey }}
-        />
+        <TodayTab {...{ plan, checked, toggleCheck, times, now, studyMs, phoneMs, studyGoalMs, studyDone, allDone, spamming, toggleTimer, justUnlocked, daysCleared }} />
       )}
       {tab === "schedule" && <ScheduleTab />}
       {tab === "guide" && <GuideTab />}
@@ -226,89 +279,90 @@ function TabBar({ tab, setTab }) {
   );
 }
 
-// Picks the colors for one quest card. Tasks with a session tracker get blue, tasks that
-// are just "check it off when it happens" get green. Pulling
-// this out of the .map() below instead of writing it all inline keeps that loop
-// readable - it's just five lines of color math, not the whole point of the loop.
-function getQuestColors(hasTimer, isChecked) {
-  const accent = hasTimer ? "#2E6FF2" : "#3DDC97";
-  const accentLight = hasTimer ? "#6FA8FF" : "#6FE3B4";
-  const accentSoft = hasTimer ? "rgba(46,111,242,0.08)" : "rgba(61,220,151,0.08)";
-  const uncheckedBorder = hasTimer ? "#1E2530" : "#17261F";
-  const uncheckedBg = hasTimer ? "#12161F" : "#0F1713";
-  return {
-    border: isChecked ? accent : uncheckedBorder,
-    background: isChecked ? accentSoft : uncheckedBg,
-    checkboxBorder: isChecked ? accent : (hasTimer ? "#3A4356" : "#2A4A3E"),
-    text: isChecked ? accentLight : null, // null means "use the normal unchecked text color"
-  };
-}
-
 // ---- TODAY tab -----------------------------------------------------
-function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle, completeViaTimer, allDone, doneCount, justUnlocked, daysCleared, dateKey }) {
+function TodayTab({ plan, checked, toggleCheck, times, now, studyMs, phoneMs, studyGoalMs, studyDone, allDone, spamming, toggleTimer, justUnlocked, daysCleared }) {
+  const studyOn = isRunning(times.study);
+  const phoneOn = isRunning(times.phone);
+  const studyPct = Math.min(100, (studyMs / studyGoalMs) * 100);
+
+  const phoneMin = phoneMs / 60000;
+  const phoneCapMs = PHONE_CAP_MIN * 60000;
+  const phonePct = Math.min(100, (phoneMs / phoneCapMs) * 100);
+  const phoneState = phoneMin >= PHONE_CAP_MIN ? "over" : phoneMin >= PHONE_AIM_MIN ? "warn" : "ok";
+  const phoneColor = phoneState === "over" ? "#E06C6C" : phoneState === "warn" ? "#F2C14E" : "#6FA8FF";
+
   return (
     <>
-      <div style={S.xpWrap}>
-        <div style={S.xpLabelRow}>
-          <span style={{ ...S.mono, fontSize: 11, color: "#7A8598", letterSpacing: 1.5 }}>{sectionLabel}</span>
-          <span style={{ ...S.mono, fontSize: 11, color: pct === 100 ? "#F2C14E" : "#6FA8FF", letterSpacing: 1 }}>{earnedXP} / {totalXP} XP</span>
-        </div>
-        <div style={S.xpTrack}>
-          <div style={{ ...S.xpFill, width: `${pct}%`, background: pct === 100 ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
-        </div>
-      </div>
-
-      <div style={{ padding: "0 16px 10px", display: "flex", gap: 14 }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 3, background: "#2E6FF2", display: "inline-block" }} />
-          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>has a tracker</span>
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 3, background: "#3DDC97", display: "inline-block" }} />
-          <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598" }}>just check it off</span>
-        </span>
-        <span style={{ ...S.mono, fontSize: 9.5, color: "#7A8598", marginLeft: "auto" }}>🌙 done by 10:30</span>
-      </div>
       <div style={{ padding: "0 16px" }}>
-        {tasks.map((t) => {
-          const on = !!checked[t.id];
-          const isFixed = !t.session;
-          const colors = getQuestColors(!!t.session, on);
+        <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "0 2px 10px" }}>{plan.label} · 🌙 DONE BY 10:30</div>
+
+        {spamming && (
+          <div style={S.spamBanner}>chill lil kid, lock in 🔒</div>
+        )}
+
+        {/* ---- study timer ---- */}
+        <div style={{ ...S.bigCard, borderColor: studyOn ? "#2E6FF2" : studyDone ? "#F2C14E" : "#1E2530" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📚 STUDIED TODAY</span>
+            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>goal {formatGoal(plan.studyGoal)}</span>
+          </div>
+          <div style={{ ...S.display, fontSize: 38, color: studyDone ? "#F2C14E" : studyOn ? "#6FA8FF" : "#E8ECF4", marginTop: 4 }}>
+            {formatDuration(studyMs)}
+          </div>
+          <div style={{ ...S.xpTrack, marginTop: 8 }}>
+            <div style={{ ...S.xpFill, width: `${studyPct}%`, background: studyDone ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
+          </div>
+          <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 7 }}>
+            {studyDone ? "Goal hit ✓ Anything extra is a bonus." : studyOn ? "Studying… phone's in the other room, right?" : `${formatDuration(Math.max(0, studyGoalMs - studyMs))} to go`}
+          </div>
+          <button onClick={() => toggleTimer("study")} style={{ ...S.bigBtn, background: studyOn ? "#1E2530" : "#2E6FF2", color: studyOn ? "#C9D2E0" : "#fff" }}>
+            {studyOn ? "■ STOP" : "▶ START STUDYING"}
+          </button>
+        </div>
+
+        {/* ---- checkboxes ---- */}
+        {plan.checks.map((c) => {
+          const on = !!checked[c.id];
           return (
-            <div key={t.id} style={{ ...S.quest, borderColor: colors.border, background: colors.background }}>
-              <div style={{ display: "flex", gap: 12 }}>
-                <button onClick={() => toggle(t.id)} aria-label={on ? "Mark incomplete" : "Mark complete"}
-                  style={{ ...S.checkbox, borderColor: colors.checkboxBorder, background: on ? colors.checkboxBorder : "transparent", cursor: "pointer" }}>
-                  {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
-                </button>
-                <div style={{ flex: 1, textAlign: "left" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ ...S.display, fontSize: 15, color: colors.text || "#E8ECF4", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#3A4356" }}>{t.title}</span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                      {isFixed && <span style={{ ...S.mono, fontSize: 8, color: "#3DDC97", letterSpacing: 0.5, border: "1px solid #2A4A3E", borderRadius: 4, padding: "1px 4px" }}>JUST CHECK</span>}
-                      <span style={{ ...S.mono, fontSize: 10, color: "#556075" }}>{t.time}</span>
-                    </span>
-                  </div>
-                  <p style={{ ...S.body, fontSize: 12.5, color: on ? "#556075" : "#8A94A8", margin: "5px 0 0", lineHeight: 1.5 }}>{t.desc}</p>
-                </div>
-                <span style={{ ...S.mono, fontSize: 10, color: colors.text || "#556075", alignSelf: "flex-start", marginTop: 2 }}>+{t.xp}</span>
-              </div>
-              {/* Session tracker. The key includes the date so every day starts fresh,
-                  and yesterday's log is still saved under yesterday's key. */}
-              {t.session && (
-                <SessionTracker
-                  storageKey={`guri-session:${dateKey}:${t.id}`}
-                  kind={t.session.kind}
-                  minutes={t.session.minutes}
-                  checked={on}
-                  onFinish={() => completeViaTimer(t.id)}
-                />
-              )}
-            </div>
+            <button key={c.id} onClick={() => toggleCheck(c.id)} aria-label={`${c.title}${on ? ", done" : ""}`}
+              style={{ ...S.checkRow, borderColor: on ? "#3DDC97" : "#17261F", background: on ? "rgba(61,220,151,0.08)" : "#0F1713" }}>
+              <span style={{ ...S.checkbox, borderColor: on ? "#3DDC97" : "#2A4A3E", background: on ? "#3DDC97" : "transparent" }}>
+                {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+              </span>
+              <span style={{ flex: 1, textAlign: "left" }}>
+                <span style={{ ...S.display, fontSize: 14.5, color: on ? "#6FE3B4" : "#E8ECF4", display: "block", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#2A4A3E" }}>{c.title}</span>
+                <span style={{ ...S.body, fontSize: 12, color: on ? "#556075" : "#8A94A8", display: "block", marginTop: 3, lineHeight: 1.45 }}>{c.desc}</span>
+              </span>
+            </button>
           );
         })}
+
+        {/* ---- phone timer ---- */}
+        <div style={{ ...S.bigCard, borderColor: phoneOn ? phoneColor : "#1E2530", marginTop: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📱 PHONE TODAY</span>
+            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>max {formatGoal(PHONE_CAP_MIN)}</span>
+          </div>
+          <div style={{ ...S.display, fontSize: 30, color: phoneState === "ok" ? "#E8ECF4" : phoneColor, marginTop: 4 }}>
+            {formatDuration(phoneMs)}
+          </div>
+          {/* bar with a little marker at the 2 hour "try to stay under" line */}
+          <div style={{ position: "relative", marginTop: 8 }}>
+            <div style={S.xpTrack}>
+              <div style={{ ...S.xpFill, width: `${phonePct}%`, background: phoneColor }} />
+            </div>
+            <div style={{ position: "absolute", top: -3, left: `${(PHONE_AIM_MIN / PHONE_CAP_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
+          </div>
+          <div style={{ ...S.body, fontSize: 12, color: phoneState === "ok" ? "#8A94A8" : phoneColor, marginTop: 7 }}>
+            {phoneState === "over" ? "Time's up. That's the 2.5 hr max." : phoneState === "warn" ? "Past 2 hrs. Try to wrap it up." : "Try to stay under 2 hrs (the yellow line)."}
+          </div>
+          <button onClick={() => toggleTimer("phone")} style={{ ...S.bigBtn, background: phoneOn ? "#1E2530" : "#2A3242", color: "#C9D2E0" }}>
+            {phoneOn ? "■ DONE WITH PHONE" : "▶ START PHONE TIME"}
+          </button>
+        </div>
       </div>
 
+      {/* ---- PS5 lock ---- */}
       <div style={{ ...S.lockCard, borderColor: allDone ? "#F2C14E" : "#1E2530", background: allDone ? "rgba(242,193,78,0.07)" : "#0F131B" }}>
         <div style={S.psRow}>{["△", "○", "✕", "□"].map((s, i) => (<span key={i} style={{ ...S.psSym, color: allDone ? "#F2C14E" : "#3A4356", transition: "color 0.5s", transitionDelay: `${i * 0.1}s` }}>{s}</span>))}</div>
         <div style={{ ...S.display, fontSize: 22, letterSpacing: 2, marginTop: 10, color: allDone ? "#F2C14E" : "#556075" }}>{allDone ? "PS5 UNLOCKED" : "PS5 LOCKED"}</div>
@@ -317,6 +371,8 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
         </p>
       </div>
 
+      <TimeLog times={times} />
+
       {justUnlocked && (
         <div style={S.toast}><span style={{ ...S.display, fontSize: 14, letterSpacing: 1.5, color: "#0B0E14" }}>🏆 DAY CLEARED — {daysCleared} TOTAL</span></div>
       )}
@@ -324,7 +380,40 @@ function TodayTab({ sectionLabel, pct, earnedXP, totalXP, tasks, checked, toggle
   );
 }
 
-// ---- SCHEDULE tab (read-only, big-picture view) --------------------
+// The full start/stop history, tucked at the bottom and collapsed by default.
+// Sessions under a minute are hidden (that's just button mashing), with a count
+// so it's still honest that they happened.
+function TimeLog({ times }) {
+  const [open, setOpen] = useState(false);
+  const all = [...toSessions(times.study, "study"), ...toSessions(times.phone, "phone")].sort((a, b) => a.start - b.start);
+  const real = all.filter((s) => s.end === null || s.end - s.start >= 60000);
+  const tiny = all.length - real.length;
+  if (all.length === 0) return null;
+
+  return (
+    <div style={{ padding: "14px 16px 0" }}>
+      <button onClick={() => setOpen(!open)} style={{ ...S.mono, fontSize: 10, letterSpacing: 1, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: "6px 0", width: "100%", textAlign: "center" }}>
+        {open ? "▴ HIDE TIME LOG" : `▾ TIME LOG (${real.length})`}
+      </button>
+      {open && (
+        <div style={{ border: "1px solid #1E2530", borderRadius: 12, background: "#0F131B", padding: "10px 12px", marginTop: 4 }}>
+          {real.map((s, i) => (
+            <div key={i} style={{ ...S.mono, fontSize: 10.5, color: "#8A94A8", lineHeight: 1.9, display: "flex", justifyContent: "space-between" }}>
+              <span>{s.which === "study" ? "📚" : "📱"} {formatClock(s.start)} – {s.end ? formatClock(s.end) : "now"}</span>
+              <span style={{ color: "#556075" }}>{s.end ? formatDuration(s.end - s.start) : "running"}</span>
+            </div>
+          ))}
+          {tiny > 0 && (
+            <div style={{ ...S.mono, fontSize: 10, color: "#556075", marginTop: 6 }}>+ {tiny} tap{tiny === 1 ? "" : "s"} under a minute (hidden)</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- SCHEDULE tab (read-only, suggested order) ----------------------
+// Not checkboxes anymore - just the order that tends to work, for reference.
 function ScheduleTab() {
   const Row = ({ n, title, sub }) => (
     <div style={S.schedRow}>
@@ -337,43 +426,42 @@ function ScheduleTab() {
   );
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text="MON – FRI (AFTER SCHOOL)" />
-      <Row n="1" title="Home from school" sub="Snack, chill, decompress." />
-      <Row n="2" title="Study Block 1 — ~90 min" />
-      <Row n="3" title="Phone — 60 min max" />
-      <Row n="4" title="Kindle — 1hr+" />
-      <Row n="5" title="Study Block 2 — ~90 min" />
-      <Row n="6" title="Dinner — 30–60 min" />
-      <Row n="7" title="Study Block 3 — ~45 min" sub="Shorter one after dinner." />
-      <Row n="8" title="Done by 10:30" sub="Kindle in bed is fine, then lights out." />
+      <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "4px 0 16px" }}>
+        Suggested order. You don't check these off — just run the study timer and hit your goal.
+      </p>
+      <SectionLabel text="MON – FRI · GOAL 3h 30m" />
+      <Row n="1" title="Home from school" sub="Snack, chill." />
+      <Row n="2" title="Study ~90 min" />
+      <Row n="3" title="Phone + Kindle" sub="Phone max 2.5 hrs for the whole day, aim under 2." />
+      <Row n="4" title="Study ~90 min" />
+      <Row n="5" title="Dinner" />
+      <Row n="6" title="Study ~30–45 min" sub="Finish the section you're on." />
+      <Row n="7" title="Done by 10:30" />
 
       <div style={{ height: 18 }} />
-      <SectionLabel text="SATURDAY" />
-      <Row n="1" title="No phone before class" sub="Kindle in the morning is fine." />
+      <SectionLabel text="SATURDAY · GOAL 3h" />
+      <Row n="1" title="No phone before class" sub="Kindle's fine." />
       <Row n="2" title="Khan's — 10:00–1:30" />
       <Row n="3" title="Home, eat, relax" />
-      <Row n="4" title="Study Block 1 — ~90 min" />
-      <Row n="5" title="Phone — 60 min max" />
-      <Row n="6" title="Kindle — 1hr+" />
-      <Row n="7" title="Study Block 2 — ~90 min" />
-      <Row n="8" title="Dinner, then free until 10:30" />
+      <Row n="4" title="Study ~90 min" />
+      <Row n="5" title="Phone + Kindle" />
+      <Row n="6" title="Study ~90 min" />
+      <Row n="7" title="Dinner, then free until 10:30" />
 
       <div style={{ height: 18 }} />
-      <SectionLabel text="SUNDAY" />
-      <Row n="1" title="No phone before class" sub="Kindle in the morning is fine." />
+      <SectionLabel text="SUNDAY · GOAL 3h" />
+      <Row n="1" title="No phone before class" sub="Kindle's fine." />
       <Row n="2" title="Khan's — 11:00–2:00" />
       <Row n="3" title="Home, eat, relax" />
-      <Row n="4" title="Study Block 1 — ~90 min" />
-      <Row n="5" title="Phone — 60 min max" />
-      <Row n="6" title="Kindle — 1hr+" />
-      <Row n="7" title="Study Block 2 — ~60 min" />
-      <Row n="8" title="Post-it Redo — ~30 min" sub="Once a week. Every post-it page, try it again." />
-      <Row n="9" title="Dinner, then free until 10:30" />
+      <Row n="4" title="Study ~90 min" />
+      <Row n="5" title="Phone + Kindle" />
+      <Row n="6" title="Study ~60 min + Post-it redo ~30 min" sub="Redo time counts toward the goal." />
+      <Row n="7" title="Dinner, then free until 10:30" />
 
       <div style={{ ...S.restRule, margin: "20px 0 4px" }}>
         <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⚠ THE DEAL</span>
         <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 13, lineHeight: 1.55 }}>
-          Work before games, every day. Clear the whole day's quests and the PS5 might be yours again.
+          Work before games, every day. Hit your study goal, check your boxes, and the PS5 might be yours again.
         </p>
       </div>
     </div>
@@ -466,153 +554,6 @@ function CalendarTab({ completedDates, todayKey }) {
 
 function SectionLabel({ text }) {
   return <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "2px 0 10px" }}>{text}</div>;
-}
-
-// ---- session tracker -------------------------------------------------
-// Replaced the old countdown timer. That one ran on setTimeout, which phones pause
-// when the screen turns off, so it would freeze or lose time. This version never
-// "counts" anything. It just saves timestamps (when he started, took a break, came
-// back, finished) and figures out the elapsed time from the clock whenever it draws.
-// So the screen can lock, the app can close, and the numbers are still right
-// when he comes back.
-function SessionTracker({ storageKey, kind, minutes, checked, onFinish }) {
-  const [log, setLog] = useState([]); // e.g. [{ type: "start", at: 1726... }, { type: "break", at: ... }]
-  const [now, setNow] = useState(Date.now());
-  const [loaded, setLoaded] = useState(false);
-
-  // load this session's saved log (if any) when the tracker first shows up
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await window.storage.get(storageKey);
-        if (r?.value) setLog(JSON.parse(r.value));
-      } catch (e) {}
-      setLoaded(true);
-    })();
-  }, [storageKey]);
-
-  const last = log.length ? log[log.length - 1].type : null;
-  const status = !last ? "idle" : last === "finish" ? "done" : last === "break" ? "break" : "working";
-
-  // Only job of this interval: redraw once a second so the numbers move.
-  // If the phone pauses it, nothing is lost, since the math uses timestamps.
-  useEffect(() => {
-    if (status !== "working" && status !== "break") return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [status]);
-
-  async function addEvent(type) {
-    const next = [...log, { type, at: Date.now() }];
-    setLog(next);
-    setNow(Date.now());
-    try { await window.storage.set(storageKey, JSON.stringify(next)); } catch (e) {}
-    if (type === "finish") onFinish && onFinish();
-  }
-  async function reset() {
-    setLog([]);
-    try { await window.storage.set(storageKey, JSON.stringify([])); } catch (e) {}
-  }
-
-  if (!loaded) return null;
-  // If he checked it off by hand without ever starting the tracker, hide it.
-  if (checked && status === "idle") return null;
-
-  const { workMs, breakMs, breakCount } = sumSession(log, now);
-  const goalMs = minutes * 60 * 1000;
-  const isCap = kind === "cap";
-  const pctDone = Math.min(100, (workMs / goalMs) * 100);
-  const capLeft = goalMs - workMs;
-
-  const bigLabel = isCap ? (capLeft > 0 ? "LEFT" : "TIME'S UP") : "STUDIED";
-  const bigValue = isCap ? formatDuration(Math.max(0, capLeft)) : formatDuration(workMs);
-  const bigColor = isCap && capLeft <= 0 ? "#E06C6C" : status === "working" ? "#6FA8FF" : "#C9D2E0";
-
-  return (
-    <div style={S.timerBox}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ ...S.mono, fontSize: 10, color: "#7A8598", letterSpacing: 0.5 }}>
-          {bigLabel}
-          {status === "break" && <span style={{ color: "#F2C14E" }}> · ON BREAK</span>}
-        </span>
-        <span style={{ ...S.display, fontSize: 20, color: bigColor }}>{bigValue}</span>
-      </div>
-
-      {/* progress toward the goal (or how much of the cap is used) */}
-      <div style={{ ...S.xpTrack, height: 5, marginTop: 7 }}>
-        <div style={{ height: "100%", width: `${pctDone}%`, background: isCap ? (capLeft <= 0 ? "#E06C6C" : "#6FA8FF") : pctDone >= 100 ? "#F2C14E" : "#2E6FF2", transition: "width 0.4s" }} />
-      </div>
-      <div style={{ ...S.mono, fontSize: 9.5, color: "#556075", marginTop: 5 }}>
-        {isCap ? `${minutes} min max` : pctDone >= 100 ? `goal hit ✓ — finish at a good stopping point` : `goal ${minutes} min`}
-        {breakCount > 0 && ` · ${breakCount} break${breakCount === 1 ? "" : "s"} (${formatDuration(breakMs)})`}
-      </div>
-
-      {/* buttons change depending on where he is in the session */}
-      {status !== "done" && (
-        <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
-          {status === "idle" && <button onClick={() => addEvent("start")} style={S.timerBtnPrimary}>▶ Start</button>}
-          {status === "working" && (
-            <button onClick={() => addEvent("break")} style={S.timerBtnBreak}>{isCap ? "⏸ Pause" : "☕ Break"}</button>
-          )}
-          {status === "break" && <button onClick={() => addEvent("resume")} style={S.timerBtnPrimary}>▶ Back to it</button>}
-          {status !== "idle" && <button onClick={() => addEvent("finish")} style={S.timerBtnGhost}>■ {isCap ? "Done" : "Finish"}</button>}
-        </div>
-      )}
-
-      {/* the actual time log */}
-      {log.length > 0 && (
-        <div style={{ marginTop: 9 }}>
-          {log.map((e, i) => (
-            <div key={i} style={{ ...S.mono, fontSize: 10, color: "#7A8598", lineHeight: 1.7 }}>
-              {EVENT_LABELS[e.type]} {formatClock(e.at)}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {status === "done" && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-          <span style={{ ...S.mono, fontSize: 10.5, color: "#F2C14E" }}>✓ Logged</span>
-          <button onClick={reset} style={{ ...S.mono, fontSize: 10, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: 0 }}>↺ reset</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const EVENT_LABELS = { start: "▶ started", break: "☕ break", resume: "▶ back", finish: "■ finished" };
-
-// Walks the log in order and adds up working time vs. break time.
-// "now" is used for whatever's still in progress (the current work or break stretch).
-function sumSession(log, now) {
-  let workMs = 0, breakMs = 0, breakCount = 0;
-  let mode = null, since = 0;
-  for (const e of log) {
-    if (mode === "work") workMs += e.at - since;
-    if (mode === "break") breakMs += e.at - since;
-    if (e.type === "start" || e.type === "resume") mode = "work";
-    else if (e.type === "break") { mode = "break"; breakCount++; }
-    else if (e.type === "finish") mode = null;
-    since = e.at;
-  }
-  if (mode === "work") workMs += now - since;
-  if (mode === "break") breakMs += now - since;
-  return { workMs, breakMs, breakCount };
-}
-
-// 5025000 ms -> "1:23:45", 125000 -> "2:05"
-function formatDuration(ms) {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const pad = (n) => String(n).padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
-
-function formatClock(ms) {
-  return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 function NotesPanel({ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }) {
@@ -735,6 +676,10 @@ const S = {
   psRow: { display: "flex", justifyContent: "center", gap: 14 },
   psSym: { fontSize: 16, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 600 },
   toast: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "linear-gradient(90deg,#F2C14E,#FFDD87)", padding: "11px 20px", borderRadius: 30, animation: "toastIn 0.35s ease", zIndex: 50, whiteSpace: "nowrap", boxShadow: "0 6px 24px rgba(242,193,78,0.35)" },
+  bigCard: { border: "1px solid", borderRadius: 14, background: "#12161F", padding: "14px 14px", marginBottom: 10, transition: "border-color 0.3s" },
+  bigBtn: { width: "100%", marginTop: 12, border: "none", borderRadius: 10, padding: "13px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 1.5, cursor: "pointer" },
+  checkRow: { display: "flex", gap: 12, width: "100%", padding: "12px 13px", marginBottom: 9, borderRadius: 12, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
+  spamBanner: { textAlign: "center", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: 0.5, color: "#0B0E14", background: "#F2C14E", borderRadius: 10, padding: "10px 0", marginBottom: 10 },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
   timerBtnPrimary: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#6FA8FF", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
   timerBtnBreak: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#F2C14E", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
