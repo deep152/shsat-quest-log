@@ -1,112 +1,146 @@
 // Guri's SHSAT Quest Log
 // A daily tracker app I built for my younger brother while he preps for the SHSAT.
-// It tracks how long he actually studied and how long he was on his phone (using real
-// start/stop times, so it survives the screen locking), has a few simple checkboxes,
-// and unlocks his PS5 once he hits the day's study goal.
+// It tracks what he studied and for how long (Kaplan Math / ELA, school homework,
+// Khan's homework), how long he was on his phone, and a few simple checkboxes for
+// the rest of his day. His PS5 unlocks once he hits his Kaplan goal and checks
+// everything off.
 //
 // Built with React (hooks only, no class components). Styled with plain JS style
 // objects instead of a CSS file, since that's what runs cleanly as a single file.
 //
-// Version 2: the first version had a checkbox + timer for every block of the day,
-// and it was too much for him to keep track of. This version only tracks what
-// actually matters: study time, phone time, and whether he checked his answers.
+// Timers never "count" - they save timestamps (start, break, back, stop) and work
+// out the totals from the clock whenever they draw. That's what lets the phone
+// sleep or the app close without losing any time.
 
 import { useState, useEffect } from "react";
 
-// ---- the plan for each kind of day -----------------------------------
-// studyGoal is in minutes. checks are the plain checkboxes for that day.
-const CHECK_ANSWERS = { id: "checked", title: "Checked my answers", desc: "Every couple pages. Wrong ones got a post-it with one line on why." };
-const KINDLE = { id: "kindle", title: "Kindle 1hr+", desc: "No cap on this one, more is great." };
-const NO_PHONE_MORNING = { id: "nophone", title: "No phone before Khan's", desc: "Kindle in the morning is fine." };
-
-const DAY_PLANS = {
-  weekday: { label: "SCHOOL DAY", studyGoal: 210, checks: [CHECK_ANSWERS, KINDLE] },
-  khans_sat: {
-    label: "KHAN'S DAY", studyGoal: 180,
-    checks: [NO_PHONE_MORNING, { id: "class", title: "Khan's class", desc: "10:00–1:30. Lock in for the whole thing." }, CHECK_ANSWERS, KINDLE],
-  },
-  khans_sun: {
-    label: "KHAN'S DAY", studyGoal: 180,
-    checks: [
-      NO_PHONE_MORNING,
-      { id: "class", title: "Khan's class", desc: "11:00–2:00. Lock in for the whole thing." },
-      CHECK_ANSWERS,
-      { id: "postit", title: "Post-it redo (weekly)", desc: "Every page with a post-it, try it again. Got it? Rip it out." },
-      KINDLE,
-    ],
-  },
+// ---- what he can study ------------------------------------------------
+const CATEGORIES = {
+  math:   { label: "Kaplan Math", short: "Math",      emoji: "📐", kaplan: true },
+  ela:    { label: "Kaplan ELA",  short: "ELA",       emoji: "📖", kaplan: true },
+  school: { label: "School HW",   short: "School HW", emoji: "🏫" },
+  khans:  { label: "Khan's HW",   short: "Khan's HW", emoji: "📝" },
 };
+const CAT_ORDER = ["math", "ela", "school", "khans"];
 
-const PHONE_AIM_MIN = 120; // try to stay under this
-const PHONE_CAP_MIN = 150; // hard max
+const KAPLAN_GOAL_MIN = 120; // needed for the PS5
+const KAPLAN_AIM_MIN = 150;  // what to actually aim for
+const PHONE_AIM_MIN = 120;   // try to stay under this
+const PHONE_CAP_MIN = 150;   // hard max
+
+// ---- the green check-off items for each kind of day --------------------
+// These are in the order the day usually goes, so they double as a quick
+// "where am I in my day" list.
+const C = {
+  home:    { id: "home",    title: "Home from school",        desc: "Snack, relax, decompress." },
+  checked: { id: "checked", title: "Checked my answers",      desc: "Every couple pages. Wrong ones got a post-it with one line on why." },
+  kindle:  { id: "kindle",  title: "Kindle 1hr+",             desc: "No cap on this one." },
+  school:  { id: "schoolhw", title: "School homework done",   desc: "Whatever's due tomorrow." },
+  dinner:  { id: "dinner",  title: "Dinner",                  desc: "Whenever it's ready." },
+  nophone: { id: "nophone", title: "No phone before Khan's",  desc: "Kindle in the morning is fine." },
+  homeeat: { id: "homeeat", title: "Home, eat, relax",        desc: "No set length." },
+  handin:  { id: "handin",  title: "Handed in Khan's HW",     desc: "Due today." },
+  postit:  { id: "postit",  title: "Post-it redo (weekly)",   desc: "Every page with a post-it, try it again. Got it? Rip it out." },
+};
+const DAY_PLANS = {
+  weekday:   { label: "SCHOOL DAY", checks: [C.home, C.checked, C.kindle, C.school, C.dinner] },
+  khans_sat: { label: "KHAN'S DAY · 10:00–1:30", checks: [C.nophone, { id: "class", title: "Khan's class", desc: "10:00–1:30. Lock in." }, C.handin, C.homeeat, C.checked, C.kindle, C.dinner] },
+  khans_sun: { label: "KHAN'S DAY · 11:00–2:00", checks: [C.nophone, { id: "class", title: "Khan's class", desc: "11:00–2:00. Lock in." }, C.homeeat, C.checked, C.postit, C.kindle, C.dinner] },
+};
 
 // getDay() returns 0-6 for Sunday-Saturday, so this is a lookup table for which plan to use.
 const DAY_TYPES = { 0: "khans_sun", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday", 5: "weekday", 6: "khans_sat" };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
 
-// Turns a Date into "2026-09-15" so it can be used as a storage key. Built by hand
-// instead of .toISOString() because that converts to UTC first, which can roll the
-// date over to the wrong day late at night.
+// "2026-09-15" style key. Built by hand instead of .toISOString() because that
+// converts to UTC first, which can roll the date over late at night.
 function dateKeyFor(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ---- time tracking helpers --------------------------------------------
-// A timer's log is just a list of { type: "start" | "stop", at: timestamp }.
-// Nothing ever "counts" - the total is worked out from the timestamps every time
-// it's drawn. That's why the phone locking or the app closing can't lose time.
-function isRunning(log) {
-  return log.length > 0 && log[log.length - 1].type === "start";
+// ---- time math -----------------------------------------------------------
+// The study log is a list of events like:
+//   { type: "start", cat: "math", at }  { type: "break", at }  { type: "resume", at }  { type: "stop", at }
+// This walks it in order and adds up time per category, plus break time.
+function readStudy(log, now) {
+  const byCat = { math: 0, ela: 0, school: 0, khans: 0 };
+  let breakMs = 0, breakCount = 0;
+  let mode = null, cat = null, since = 0;
+  for (const e of log) {
+    if (mode === "work" && cat) byCat[cat] += e.at - since;
+    if (mode === "break") breakMs += e.at - since;
+    if (e.type === "start") { cat = e.cat; mode = "work"; }
+    else if (e.type === "resume") mode = "work";
+    else if (e.type === "break") { mode = "break"; breakCount++; }
+    else if (e.type === "stop") mode = null;
+    since = e.at;
+  }
+  if (mode === "work" && cat) byCat[cat] += now - since;
+  if (mode === "break") breakMs += now - since;
+  const status = mode === "work" ? "working" : mode === "break" ? "break" : "idle";
+  return { byCat, breakMs, breakCount, status, cat: mode ? cat : null, sinceMs: mode ? now - since : 0 };
 }
-function totalMs(log, now) {
+// Phone is simpler - just start/stop.
+function isPhoneOn(log) { return log.length > 0 && log[log.length - 1].type === "start"; }
+function phoneTotal(log, now) {
   let total = 0, startedAt = null;
   for (const e of log) {
     if (e.type === "start") startedAt = e.at;
     else if (e.type === "stop" && startedAt !== null) { total += e.at - startedAt; startedAt = null; }
   }
-  if (startedAt !== null) total += now - startedAt; // still running
+  if (startedAt !== null) total += now - startedAt;
   return total;
 }
-// Turns the start/stop list into sessions like { start, end } for the log at the bottom.
-function toSessions(log, which) {
-  const out = [];
-  for (const e of log) {
-    if (e.type === "start") out.push({ which, start: e.at, end: null });
-    else if (out.length && out[out.length - 1].end === null) out[out.length - 1].end = e.at;
+// Turns the logs into rows like { kind: "math", start, end } for the time log at the bottom.
+function toRows(times) {
+  const rows = [];
+  let cur = null, cat = null;
+  const close = (at) => { if (cur) { cur.end = at; rows.push(cur); cur = null; } };
+  for (const e of times.study) {
+    if (e.type === "start") { close(e.at); cat = e.cat; cur = { kind: cat, start: e.at, end: null }; }
+    else if (e.type === "resume") { close(e.at); cur = { kind: cat, start: e.at, end: null }; }
+    else if (e.type === "break") { close(e.at); cur = { kind: "break", start: e.at, end: null }; }
+    else if (e.type === "stop") close(e.at);
   }
-  return out;
+  if (cur) rows.push(cur);
+  let ps = null;
+  for (const e of times.phone) {
+    if (e.type === "start") ps = e.at;
+    else if (e.type === "stop" && ps !== null) { rows.push({ kind: "phone", start: ps, end: e.at }); ps = null; }
+  }
+  if (ps !== null) rows.push({ kind: "phone", start: ps, end: null });
+  return rows.sort((a, b) => a.start - b.start);
 }
-// 5025000 ms -> "1:23:45", 125000 -> "2:05"
 function formatDuration(ms) {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
+  const total = Math.floor(Math.max(0, ms) / 1000);
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
   const pad = (n) => String(n).padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
-// For goals: 210 -> "3h 30m"
-function formatGoal(min) {
-  const h = Math.floor(min / 60), m = min % 60;
+// Shorter version for summaries: 7800000 -> "2h 10m"
+function formatShort(ms) {
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  if (h === 0) return `${m}m`;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 function formatClock(ms) {
   return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-const SPAM_TAPS = 5;        // this many start/stop taps...
+const SPAM_TAPS = 5;        // this many taps...
 const SPAM_WINDOW = 60000;  // ...inside one minute = he's just messing with the buttons
+const EMPTY_TIMES = { study: [], phone: [] };
 
 // ---- root component --------------------------------------------------
 export default function GuriQuestLog() {
-  // All the shared state lives here and gets passed down as props. The app is small
-  // enough that I didn't need Context or a state library.
   const [tab, setTab] = useState("today");
-  const [checked, setChecked] = useState({});                 // today's checkboxes, e.g. { kindle: true }
-  const [times, setTimes] = useState({ study: [], phone: [] }); // today's timer logs
+  const [checked, setChecked] = useState({});        // today's green checkboxes
+  const [times, setTimes] = useState(EMPTY_TIMES);   // today's timer logs
+  const [weekPast, setWeekPast] = useState([]);      // earlier days this week (Sun → yesterday), for the weekly totals
   const [now, setNow] = useState(Date.now());
-  const [completedDates, setCompletedDates] = useState([]);   // every "YYYY-MM-DD" he fully cleared
+  const [completedDates, setCompletedDates] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
@@ -117,48 +151,61 @@ export default function GuriQuestLog() {
   const [showNotes, setShowNotes] = useState(false);
 
   const today = new Date();
-  const dayType = DAY_TYPES[today.getDay()];
-  const dayName = DAY_NAMES[today.getDay()];
+  const dayIdx = today.getDay();
+  const dayType = DAY_TYPES[dayIdx];
+  const dayName = DAY_NAMES[dayIdx];
   const dateKey = dateKeyFor(today);
   const plan = DAY_PLANS[dayType];
   const monthName = today.toLocaleString("en-US", { month: "long" }).toUpperCase();
   const daysCleared = completedDates.length;
+  const timesKey = (k) => `guri-study:${k}`;
 
-  // Load everything for today. Re-runs if the date changes, which is how the
-  // day resets on its own.
   useEffect(() => {
     (async () => {
       try { const r = await window.storage.get(`guri-day:${dateKey}`); if (r?.value) setChecked(JSON.parse(r.value)); } catch (e) {}
-      try { const t = await window.storage.get(`guri-times:${dateKey}`); if (t?.value) setTimes(JSON.parse(t.value)); } catch (e) {}
+      try { const t = await window.storage.get(timesKey(dateKey)); if (t?.value) setTimes(JSON.parse(t.value)); } catch (e) {}
       try { const c = await window.storage.get("guri-completed-dates"); if (c?.value) setCompletedDates(JSON.parse(c.value)); } catch (e) {}
       try { const n = await window.storage.get("guri-notes"); if (n?.value) setNotes(JSON.parse(n.value)); } catch (e) {}
+      // earlier days this week, Sunday up to yesterday
+      const past = [];
+      for (let i = dayIdx; i >= 1; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        try { const t = await window.storage.get(timesKey(dateKeyFor(d))); if (t?.value) past.push(JSON.parse(t.value)); } catch (e) {}
+      }
+      setWeekPast(past);
       setLoaded(true);
     })();
   }, [dateKey]);
 
-  // derived numbers - always computed fresh from the logs, never stored
-  const studyMs = totalMs(times.study, now);
-  const phoneMs = totalMs(times.phone, now);
-  const studyGoalMs = plan.studyGoal * 60000;
-  const studyDone = studyMs >= studyGoalMs;
+  // ---- numbers, always worked out fresh from the logs ----
+  const study = readStudy(times.study, now);
+  const kaplanMs = study.byCat.math + study.byCat.ela;
+  const phoneMs = phoneTotal(times.phone, now);
+  const phoneOn = isPhoneOn(times.phone);
+  const kaplanDone = kaplanMs >= KAPLAN_GOAL_MIN * 60000;
   const checksDone = plan.checks.every((c) => checked[c.id]);
-  const allDone = studyDone && checksDone;
-  const anyRunning = isRunning(times.study) || isRunning(times.phone);
+  const allDone = kaplanDone && checksDone;
 
+  // this week = earlier days + today
+  const week = { math: study.byCat.math, ela: study.byCat.ela, khans: study.byCat.khans };
+  for (const t of weekPast) {
+    const r = readStudy(t.study || [], 0);
+    week.math += r.byCat.math; week.ela += r.byCat.ela; week.khans += r.byCat.khans;
+  }
+
+  const running = study.status !== "idle" || phoneOn;
   const recentTaps = [...times.study, ...times.phone].filter((e) => now - e.at < SPAM_WINDOW).length;
   const spamming = recentTaps >= SPAM_TAPS;
 
-  // Redraw once a second while a timer runs (or while the spam warning is up,
-  // so it goes away on its own). Purely for display - the math uses timestamps.
+  // redraw once a second while something runs (display only - math uses timestamps)
   useEffect(() => {
-    if (!anyRunning && !spamming) return;
+    if (!running && !spamming) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [anyRunning, spamming]);
+  }, [running, spamming]);
 
-  // Keep the calendar's list of cleared days in sync with whether today is done.
-  // This is an effect (not inside a click handler) because the study goal can get
-  // hit just by time passing, without him tapping anything.
+  // keep the calendar's cleared-days list in sync. An effect instead of a click
+  // handler because the Kaplan goal can get hit just by time passing.
   useEffect(() => {
     if (!loaded) return;
     const inList = completedDates.includes(dateKey);
@@ -175,25 +222,36 @@ export default function GuriQuestLog() {
     }
   }, [allDone, loaded, dateKey]);
 
-  // Start or stop one of the timers. Starting study automatically stops the
-  // phone timer and vice versa - he can't be doing both at once.
-  async function toggleTimer(which) {
-    const t = Date.now();
-    const other = which === "study" ? "phone" : "study";
-    const next = { ...times };
-    if (isRunning(times[which])) {
-      next[which] = [...times[which], { type: "stop", at: t }];
-    } else {
-      if (isRunning(times[other])) next[other] = [...times[other], { type: "stop", at: t }];
-      next[which] = [...times[which], { type: "start", at: t }];
-    }
+  async function saveTimes(next) {
     setTimes(next);
-    setNow(t);
-    try { await window.storage.set(`guri-times:${dateKey}`, JSON.stringify(next)); } catch (e) {}
+    setNow(Date.now());
+    try { await window.storage.set(timesKey(dateKey), JSON.stringify(next)); } catch (e) {}
   }
 
-  // Flip one checkbox. Spread into a brand new object instead of changing the old
-  // one, because React only notices a change when it gets a different object.
+  // Tap a subject: starts it. If something else was running (another subject,
+  // a break, or phone), that gets stopped first.
+  function startCat(cat) {
+    if (study.status === "working" && study.cat === cat) return; // already doing it
+    const t = Date.now();
+    const s = [...times.study];
+    const p = [...times.phone];
+    if (study.status !== "idle") s.push({ type: "stop", at: t });
+    if (phoneOn) p.push({ type: "stop", at: t });
+    s.push({ type: "start", cat, at: t });
+    saveTimes({ study: s, phone: p });
+  }
+  function takeBreak() { saveTimes({ ...times, study: [...times.study, { type: "break", at: Date.now() }] }); }
+  function backToIt() { saveTimes({ ...times, study: [...times.study, { type: "resume", at: Date.now() }] }); }
+  function stopStudy() { saveTimes({ ...times, study: [...times.study, { type: "stop", at: Date.now() }] }); }
+  function togglePhone() {
+    const t = Date.now();
+    if (phoneOn) return saveTimes({ ...times, phone: [...times.phone, { type: "stop", at: t }] });
+    const s = study.status !== "idle" ? [...times.study, { type: "stop", at: t }] : times.study;
+    saveTimes({ study: s, phone: [...times.phone, { type: "start", at: t }] });
+  }
+
+  // Spread into a brand new object instead of changing the old one, because
+  // React only notices a change when it gets a different object.
   async function toggleCheck(id) {
     const next = { ...checked, [id]: !checked[id] };
     setChecked(next);
@@ -243,7 +301,7 @@ export default function GuriQuestLog() {
       <TabBar tab={tab} setTab={setTab} />
 
       {tab === "today" && (
-        <TodayTab {...{ plan, checked, toggleCheck, times, now, studyMs, phoneMs, studyGoalMs, studyDone, allDone, spamming, toggleTimer, justUnlocked, daysCleared }} />
+        <TodayTab {...{ plan, dayType, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
       {tab === "schedule" && <ScheduleTab />}
       {tab === "guide" && <GuideTab />}
@@ -280,14 +338,26 @@ function TabBar({ tab, setTab }) {
 }
 
 // ---- TODAY tab -----------------------------------------------------
-function TodayTab({ plan, checked, toggleCheck, times, now, studyMs, phoneMs, studyGoalMs, studyDone, allDone, spamming, toggleTimer, justUnlocked, daysCleared }) {
-  const studyOn = isRunning(times.study);
-  const phoneOn = isRunning(times.phone);
-  const studyPct = Math.min(100, (studyMs / studyGoalMs) * 100);
+function TodayTab({ plan, dayType, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }) {
+  const aimMs = KAPLAN_AIM_MIN * 60000;
+  const goalMs = KAPLAN_GOAL_MIN * 60000;
+  const aimHit = kaplanMs >= aimMs;
+  const kaplanPct = Math.min(100, (kaplanMs / aimMs) * 100);
+  const working = study.status === "working";
+  const onBreak = study.status === "break";
+
+  // Math vs ELA nudge - he did ELA first and started Math late, so Math gets pushed
+  let nudge;
+  if (week.math + week.ela === 0) nudge = "Start with Math today 📐";
+  else if (week.math < week.ela) nudge = `Math is behind this week — start with Math 👉`;
+  else nudge = "Math & ELA are balanced this week 👍";
+
+  const khansLine = dayType === "khans_sat"
+    ? "📝 Khan's HW is due today — hand it in"
+    : `📝 Khan's HW this week: ${formatShort(week.khans)} · due Saturday${dayType === "weekday" && new Date().getDay() === 5 ? " (tomorrow!)" : ""}`;
 
   const phoneMin = phoneMs / 60000;
-  const phoneCapMs = PHONE_CAP_MIN * 60000;
-  const phonePct = Math.min(100, (phoneMs / phoneCapMs) * 100);
+  const phonePct = Math.min(100, (phoneMs / (PHONE_CAP_MIN * 60000)) * 100);
   const phoneState = phoneMin >= PHONE_CAP_MIN ? "over" : phoneMin >= PHONE_AIM_MIN ? "warn" : "ok";
   const phoneColor = phoneState === "over" ? "#E06C6C" : phoneState === "warn" ? "#F2C14E" : "#6FA8FF";
 
@@ -296,31 +366,72 @@ function TodayTab({ plan, checked, toggleCheck, times, now, studyMs, phoneMs, st
       <div style={{ padding: "0 16px" }}>
         <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "0 2px 10px" }}>{plan.label} · 🌙 DONE BY 10:30</div>
 
-        {spamming && (
-          <div style={S.spamBanner}>chill lil kid, lock in 🔒</div>
-        )}
+        {spamming && <div style={S.spamBanner}>chill lil kid, lock in 🔒</div>}
 
-        {/* ---- study timer ---- */}
-        <div style={{ ...S.bigCard, borderColor: studyOn ? "#2E6FF2" : studyDone ? "#F2C14E" : "#1E2530" }}>
+        {/* ---- study card ---- */}
+        <div style={{ ...S.bigCard, borderColor: working ? "#2E6FF2" : onBreak ? "#F2C14E" : kaplanDone ? "#F2C14E" : "#1E2530" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📚 STUDIED TODAY</span>
-            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>goal {formatGoal(plan.studyGoal)}</span>
+            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📚 KAPLAN TODAY</span>
+            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>goal 2h · aim 2h 30m</span>
           </div>
-          <div style={{ ...S.display, fontSize: 38, color: studyDone ? "#F2C14E" : studyOn ? "#6FA8FF" : "#E8ECF4", marginTop: 4 }}>
-            {formatDuration(studyMs)}
+          <div style={{ ...S.display, fontSize: 38, color: aimHit || kaplanDone ? "#F2C14E" : "#E8ECF4", marginTop: 4 }}>
+            {formatDuration(kaplanMs)}
           </div>
-          <div style={{ ...S.xpTrack, marginTop: 8 }}>
-            <div style={{ ...S.xpFill, width: `${studyPct}%`, background: studyDone ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
+          <div style={{ position: "relative", marginTop: 8 }}>
+            <div style={S.xpTrack}>
+              <div style={{ ...S.xpFill, width: `${kaplanPct}%`, background: kaplanDone ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
+            </div>
+            {/* gold line = the 2h goal the PS5 needs */}
+            <div style={{ position: "absolute", top: -3, left: `${(KAPLAN_GOAL_MIN / KAPLAN_AIM_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
           </div>
           <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 7 }}>
-            {studyDone ? "Goal hit ✓ Anything extra is a bonus." : studyOn ? "Studying… phone's in the other room, right?" : `${formatDuration(Math.max(0, studyGoalMs - studyMs))} to go`}
+            {aimHit ? "Aim hit 🔥 That's a full day of Kaplan." : kaplanDone ? "PS5 goal hit ✓ Keep going to 2h 30m if you can." : `${formatDuration(goalMs - kaplanMs)} to the PS5 goal (gold line)`}
           </div>
-          <button onClick={() => toggleTimer("study")} style={{ ...S.bigBtn, background: studyOn ? "#1E2530" : "#2E6FF2", color: studyOn ? "#C9D2E0" : "#fff" }}>
-            {studyOn ? "■ STOP" : "▶ START STUDYING"}
-          </button>
+
+          {/* today's split across everything */}
+          <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 10, lineHeight: 1.7 }}>
+            {CAT_ORDER.map((c) => `${CATEGORIES[c].emoji} ${formatShort(study.byCat[c])}`).join("   ")}
+          </div>
+
+          {/* what's happening right now */}
+          <div style={{ ...S.nowLine, color: working ? "#6FA8FF" : onBreak ? "#F2C14E" : "#8A94A8" }}>
+            {working && `${CATEGORIES[study.cat].emoji} ${CATEGORIES[study.cat].label} · ${formatDuration(study.sinceMs)} this stretch`}
+            {onBreak && `☕ On break · ${formatDuration(study.sinceMs)}${study.sinceMs > 15 * 60000 ? " — long break 👀" : ""}`}
+            {!working && !onBreak && "Pick what you're working on 👇"}
+          </div>
+
+          {/* subject buttons */}
+          <div style={S.catGrid}>
+            {CAT_ORDER.map((c) => {
+              const active = study.cat === c;
+              return (
+                <button key={c} onClick={() => startCat(c)}
+                  style={{ ...S.catBtn, background: active && working ? "#2E6FF2" : active && onBreak ? "rgba(242,193,78,0.15)" : "#161B26", borderColor: active ? (working ? "#2E6FF2" : "#F2C14E") : "#2A3242", color: active && working ? "#fff" : "#C9D2E0" }}>
+                  {CATEGORIES[c].emoji} {CATEGORIES[c].short}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* break / back / stop only show once something is running */}
+          {(working || onBreak) && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              {working && <button onClick={takeBreak} style={S.timerBtnBreak}>☕ Break</button>}
+              {onBreak && <button onClick={backToIt} style={S.timerBtnPrimary}>▶ Back to it</button>}
+              <button onClick={stopStudy} style={S.timerBtnGhost}>■ Stop</button>
+            </div>
+          )}
+
+          {/* weekly view */}
+          <div style={S.weekBox}>
+            <div style={{ ...S.mono, fontSize: 10, color: "#7A8598" }}>THIS WEEK: 📐 Math {formatShort(week.math)} · 📖 ELA {formatShort(week.ela)}</div>
+            <div style={{ ...S.body, fontSize: 12, color: week.math < week.ela || week.math + week.ela === 0 ? "#F2C14E" : "#6FE3B4", marginTop: 4 }}>{nudge}</div>
+            <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 6 }}>{khansLine}</div>
+          </div>
         </div>
 
-        {/* ---- checkboxes ---- */}
+        {/* ---- green checklist ---- */}
+        <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "14px 2px 8px" }}>TODAY'S LIST</div>
         {plan.checks.map((c) => {
           const on = !!checked[c.id];
           return (
@@ -337,26 +448,21 @@ function TodayTab({ plan, checked, toggleCheck, times, now, studyMs, phoneMs, st
           );
         })}
 
-        {/* ---- phone timer ---- */}
-        <div style={{ ...S.bigCard, borderColor: phoneOn ? phoneColor : "#1E2530", marginTop: 4 }}>
+        {/* ---- phone ---- */}
+        <div style={{ ...S.bigCard, borderColor: phoneOn ? phoneColor : "#1E2530", marginTop: 6 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📱 PHONE TODAY</span>
-            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>max {formatGoal(PHONE_CAP_MIN)}</span>
+            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>max 2h 30m</span>
           </div>
-          <div style={{ ...S.display, fontSize: 30, color: phoneState === "ok" ? "#E8ECF4" : phoneColor, marginTop: 4 }}>
-            {formatDuration(phoneMs)}
-          </div>
-          {/* bar with a little marker at the 2 hour "try to stay under" line */}
+          <div style={{ ...S.display, fontSize: 30, color: phoneState === "ok" ? "#E8ECF4" : phoneColor, marginTop: 4 }}>{formatDuration(phoneMs)}</div>
           <div style={{ position: "relative", marginTop: 8 }}>
-            <div style={S.xpTrack}>
-              <div style={{ ...S.xpFill, width: `${phonePct}%`, background: phoneColor }} />
-            </div>
+            <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${phonePct}%`, background: phoneColor }} /></div>
             <div style={{ position: "absolute", top: -3, left: `${(PHONE_AIM_MIN / PHONE_CAP_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
           </div>
           <div style={{ ...S.body, fontSize: 12, color: phoneState === "ok" ? "#8A94A8" : phoneColor, marginTop: 7 }}>
             {phoneState === "over" ? "Time's up. That's the 2.5 hr max." : phoneState === "warn" ? "Past 2 hrs. Try to wrap it up." : "Try to stay under 2 hrs (the yellow line)."}
           </div>
-          <button onClick={() => toggleTimer("phone")} style={{ ...S.bigBtn, background: phoneOn ? "#1E2530" : "#2A3242", color: "#C9D2E0" }}>
+          <button onClick={togglePhone} style={{ ...S.bigBtn, background: phoneOn ? "#1E2530" : "#2A3242", color: "#C9D2E0" }}>
             {phoneOn ? "■ DONE WITH PHONE" : "▶ START PHONE TIME"}
           </button>
         </div>
@@ -380,15 +486,16 @@ function TodayTab({ plan, checked, toggleCheck, times, now, studyMs, phoneMs, st
   );
 }
 
-// The full start/stop history, tucked at the bottom and collapsed by default.
-// Sessions under a minute are hidden (that's just button mashing), with a count
-// so it's still honest that they happened.
+// Full history for the day, tucked at the bottom and collapsed. Anything under a
+// minute is hidden (button mashing) but counted, so it's still honest.
 function TimeLog({ times }) {
   const [open, setOpen] = useState(false);
-  const all = [...toSessions(times.study, "study"), ...toSessions(times.phone, "phone")].sort((a, b) => a.start - b.start);
-  const real = all.filter((s) => s.end === null || s.end - s.start >= 60000);
-  const tiny = all.length - real.length;
-  if (all.length === 0) return null;
+  const rows = toRows(times);
+  const real = rows.filter((r) => r.end === null || r.end - r.start >= 60000);
+  const tiny = rows.length - real.length;
+  if (rows.length === 0) return null;
+  const emojiFor = (k) => (k === "break" ? "☕" : k === "phone" ? "📱" : CATEGORIES[k].emoji);
+  const labelFor = (k) => (k === "break" ? "break" : k === "phone" ? "phone" : CATEGORIES[k].short);
 
   return (
     <div style={{ padding: "14px 16px 0" }}>
@@ -397,23 +504,20 @@ function TimeLog({ times }) {
       </button>
       {open && (
         <div style={{ border: "1px solid #1E2530", borderRadius: 12, background: "#0F131B", padding: "10px 12px", marginTop: 4 }}>
-          {real.map((s, i) => (
-            <div key={i} style={{ ...S.mono, fontSize: 10.5, color: "#8A94A8", lineHeight: 1.9, display: "flex", justifyContent: "space-between" }}>
-              <span>{s.which === "study" ? "📚" : "📱"} {formatClock(s.start)} – {s.end ? formatClock(s.end) : "now"}</span>
-              <span style={{ color: "#556075" }}>{s.end ? formatDuration(s.end - s.start) : "running"}</span>
+          {real.map((r, i) => (
+            <div key={i} style={{ ...S.mono, fontSize: 10.5, color: r.kind === "break" ? "#7A6A3E" : "#8A94A8", lineHeight: 1.9, display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span>{emojiFor(r.kind)} {labelFor(r.kind)} · {formatClock(r.start)} – {r.end ? formatClock(r.end) : "now"}</span>
+              <span style={{ color: "#556075" }}>{r.end ? formatDuration(r.end - r.start) : "running"}</span>
             </div>
           ))}
-          {tiny > 0 && (
-            <div style={{ ...S.mono, fontSize: 10, color: "#556075", marginTop: 6 }}>+ {tiny} tap{tiny === 1 ? "" : "s"} under a minute (hidden)</div>
-          )}
+          {tiny > 0 && <div style={{ ...S.mono, fontSize: 10, color: "#556075", marginTop: 6 }}>+ {tiny} tap{tiny === 1 ? "" : "s"} under a minute (hidden)</div>}
         </div>
       )}
     </div>
   );
 }
 
-// ---- SCHEDULE tab (read-only, suggested order) ----------------------
-// Not checkboxes anymore - just the order that tends to work, for reference.
+// ---- SCHEDULE tab (suggested order, for reference) ------------------
 function ScheduleTab() {
   const Row = ({ n, title, sub }) => (
     <div style={S.schedRow}>
@@ -427,41 +531,43 @@ function ScheduleTab() {
   return (
     <div style={{ padding: "4px 16px 4px" }}>
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "4px 0 16px" }}>
-        Suggested order. You don't check these off — just run the study timer and hit your goal.
+        Suggested order. Kaplan goal is 2 hrs a day for the PS5, aim for 2.5. School HW and Khan's HW go on top of that — do a bit of each every day.
       </p>
-      <SectionLabel text="MON – FRI · GOAL 3h 30m" />
+      <SectionLabel text="MON – FRI" />
       <Row n="1" title="Home from school" sub="Snack, chill." />
-      <Row n="2" title="Study ~90 min" />
+      <Row n="2" title="Kaplan ~75 min" sub="Math first if Math is behind this week." />
       <Row n="3" title="Phone + Kindle" sub="Phone max 2.5 hrs for the whole day, aim under 2." />
-      <Row n="4" title="Study ~90 min" />
-      <Row n="5" title="Dinner" />
-      <Row n="6" title="Study ~30–45 min" sub="Finish the section you're on." />
-      <Row n="7" title="Done by 10:30" />
+      <Row n="4" title="Kaplan ~75 min" />
+      <Row n="5" title="School HW + a bit of Khan's HW" sub="Friday is the last day before Khan's HW is due." />
+      <Row n="6" title="Dinner" />
+      <Row n="7" title="Finish whatever's left" />
+      <Row n="8" title="Done by 10:30" />
 
       <div style={{ height: 18 }} />
-      <SectionLabel text="SATURDAY · GOAL 3h" />
+      <SectionLabel text="SATURDAY" />
       <Row n="1" title="No phone before class" sub="Kindle's fine." />
-      <Row n="2" title="Khan's — 10:00–1:30" />
+      <Row n="2" title="Khan's — 10:00–1:30" sub="Hand in Khan's HW." />
       <Row n="3" title="Home, eat, relax" />
-      <Row n="4" title="Study ~90 min" />
+      <Row n="4" title="Kaplan ~75 min" />
       <Row n="5" title="Phone + Kindle" />
-      <Row n="6" title="Study ~90 min" />
+      <Row n="6" title="Kaplan ~75 min + start next week's Khan's HW" />
       <Row n="7" title="Dinner, then free until 10:30" />
 
       <div style={{ height: 18 }} />
-      <SectionLabel text="SUNDAY · GOAL 3h" />
+      <SectionLabel text="SUNDAY" />
       <Row n="1" title="No phone before class" sub="Kindle's fine." />
       <Row n="2" title="Khan's — 11:00–2:00" />
       <Row n="3" title="Home, eat, relax" />
-      <Row n="4" title="Study ~90 min" />
+      <Row n="4" title="Kaplan ~75 min" />
       <Row n="5" title="Phone + Kindle" />
-      <Row n="6" title="Study ~60 min + Post-it redo ~30 min" sub="Redo time counts toward the goal." />
-      <Row n="7" title="Dinner, then free until 10:30" />
+      <Row n="6" title="Kaplan ~45 min + Post-it redo ~30 min" sub="Redo time counts as Kaplan." />
+      <Row n="7" title="School HW for Monday" />
+      <Row n="8" title="Dinner, then free until 10:30" />
 
       <div style={{ ...S.restRule, margin: "20px 0 4px" }}>
         <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⚠ THE DEAL</span>
         <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 13, lineHeight: 1.55 }}>
-          Work before games, every day. Hit your study goal, check your boxes, and the PS5 might be yours again.
+          Work before games, every day. Hit 2 hrs of Kaplan, check off your list, and the PS5 might be yours again.
         </p>
       </div>
     </div>
@@ -680,6 +786,10 @@ const S = {
   bigBtn: { width: "100%", marginTop: 12, border: "none", borderRadius: 10, padding: "13px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 1.5, cursor: "pointer" },
   checkRow: { display: "flex", gap: 12, width: "100%", padding: "12px 13px", marginBottom: 9, borderRadius: 12, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
   spamBanner: { textAlign: "center", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: 0.5, color: "#0B0E14", background: "#F2C14E", borderRadius: 10, padding: "10px 0", marginBottom: 10 },
+  nowLine: { fontFamily: "'Inter', sans-serif", fontSize: 12.5, marginTop: 10, marginBottom: 8 },
+  catGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
+  catBtn: { border: "1px solid", borderRadius: 10, padding: "11px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer", transition: "all 0.15s" },
+  weekBox: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #1E2530" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
   timerBtnPrimary: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#6FA8FF", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
   timerBtnBreak: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#F2C14E", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
