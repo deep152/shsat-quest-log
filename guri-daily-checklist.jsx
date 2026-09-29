@@ -28,25 +28,44 @@ const KAPLAN_AIM_MIN = 150;  // what to actually aim for
 const PHONE_AIM_MIN = 120;   // try to stay under this
 const PHONE_CAP_MIN = 150;   // hard max
 
-// ---- the green check-off items for each kind of day --------------------
-// These are in the order the day usually goes, so they double as a quick
-// "where am I in my day" list.
+// ---- the green check-off items ------------------------------------------
+// Each day's checks are split by where they show on screen, so they sit next to
+// the thing they're about:
+//   top     - before the work boxes (home from school, Khan's class...)
+//   school  - inside the School work box
+//   kaplan  - inside the Kaplan box
+//   bottom  - after the work boxes (Kindle, dinner)
 const C = {
-  home:    { id: "home",    title: "Home from school",        desc: "Snack, relax, decompress." },
-  checked: { id: "checked", title: "Checked my answers",      desc: "Every couple pages. Wrong ones got a post-it with one line on why." },
-  kindle:  { id: "kindle",  title: "Kindle 1hr+",             desc: "No cap on this one." },
-  school:  { id: "schoolhw", title: "School homework done",   desc: "Whatever's due tomorrow." },
-  dinner:  { id: "dinner",  title: "Dinner",                  desc: "Whenever it's ready." },
-  nophone: { id: "nophone", title: "No phone before Khan's",  desc: "Kindle in the morning is fine." },
-  homeeat: { id: "homeeat", title: "Home, eat, relax",        desc: "No set length." },
-  handin:  { id: "handin",  title: "Handed in Khan's HW",     desc: "Due today." },
-  postit:  { id: "postit",  title: "Post-it redo (weekly)",   desc: "Every page with a post-it, try it again. Got it? Rip it out." },
+  home:     { id: "home",     title: "Home from school",       desc: "Snack, relax, decompress." },
+  schoolhw: { id: "schoolhw", title: "Homework done",          desc: "Whatever's due tomorrow." },
+  schoolmon:{ id: "schoolhw", title: "Homework for Monday done", desc: "Get it out of the way." },
+  checked:  { id: "checked",  title: "Checked my answers",     desc: "Every couple pages. Wrong ones got a post-it with one line on why." },
+  postit:   { id: "postit",   title: "Post-it redo (weekly)",  desc: "Every page with a post-it, try it again. Got it? Rip it out." },
+  kindle:   { id: "kindle",   title: "Kindle 1hr+",            desc: "No cap on this one." },
+  dinner:   { id: "dinner",   title: "Dinner",                 desc: "Whenever it's ready." },
+  nophone:  { id: "nophone",  title: "No phone before Khan's", desc: "Kindle in the morning is fine." },
+  homeeat:  { id: "homeeat",  title: "Home, eat, relax",       desc: "No set length." },
+  handin:   { id: "handin",   title: "Handed in Khan's HW",    desc: "Last week's set. New one starts today." },
 };
 const DAY_PLANS = {
-  weekday:   { label: "SCHOOL DAY", checks: [C.home, C.checked, C.kindle, C.school, C.dinner] },
-  khans_sat: { label: "KHAN'S DAY · 10:00–1:30", checks: [C.nophone, { id: "class", title: "Khan's class", desc: "10:00–1:30. Lock in." }, C.handin, C.homeeat, C.checked, C.kindle, C.dinner] },
-  khans_sun: { label: "KHAN'S DAY · 11:00–2:00", checks: [C.nophone, { id: "class", title: "Khan's class", desc: "11:00–2:00. Lock in." }, C.homeeat, C.checked, C.postit, C.kindle, C.dinner] },
+  weekday: {
+    label: "SCHOOL DAY",
+    top: [C.home], school: [C.schoolhw], kaplan: [C.checked], bottom: [C.kindle, C.dinner],
+  },
+  khans_sat: {
+    label: "KHAN'S DAY · 10:00–1:30",
+    top: [C.nophone, { id: "class", title: "Khan's class", desc: "10:00–1:30. Lock in." }, C.handin, C.homeeat],
+    school: [], kaplan: [C.checked], bottom: [C.kindle, C.dinner],
+  },
+  khans_sun: {
+    label: "KHAN'S DAY · 11:00–2:00",
+    top: [C.nophone, { id: "class", title: "Khan's class", desc: "11:00–2:00. Lock in." }, C.homeeat],
+    school: [C.schoolmon], kaplan: [C.checked, C.postit], bottom: [C.kindle, C.dinner],
+  },
 };
+const allChecks = (plan) => [...plan.top, ...plan.school, ...plan.kaplan, ...plan.bottom];
+
+const KHANS_DEFAULT_TOTAL = 30; // questions per weekly set - editable in the app
 
 // getDay() returns 0-6 for Sunday-Saturday, so this is a lookup table for which plan to use.
 const DAY_TYPES = { 0: "khans_sun", 1: "weekday", 2: "weekday", 3: "weekday", 4: "weekday", 5: "weekday", 6: "khans_sat" };
@@ -138,7 +157,8 @@ export default function GuriQuestLog() {
   const [tab, setTab] = useState("today");
   const [checked, setChecked] = useState({});        // today's green checkboxes
   const [times, setTimes] = useState(EMPTY_TIMES);   // today's timer logs
-  const [weekPast, setWeekPast] = useState([]);      // earlier days this week (Sun → yesterday), for the weekly totals
+  const [weekPast, setWeekPast] = useState([]);      // earlier days this week (Sat → yesterday), for the weekly totals
+  const [khansQ, setKhansQ] = useState({ done: 0, total: KHANS_DEFAULT_TOTAL }); // this week's Khan's HW questions
   const [now, setNow] = useState(Date.now());
   const [completedDates, setCompletedDates] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -159,6 +179,11 @@ export default function GuriQuestLog() {
   const monthName = today.toLocaleString("en-US", { month: "long" }).toUpperCase();
   const daysCleared = completedDates.length;
   const timesKey = (k) => `guri-study:${k}`;
+  // The week runs Saturday → Friday, because Khan's HW is handed in and a new set
+  // comes out every Saturday. daysIntoWeek: Sat = 0, Sun = 1, ... Fri = 6.
+  const daysIntoWeek = (dayIdx + 1) % 7;
+  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysIntoWeek);
+  const weekKey = dateKeyFor(weekStart);
 
   useEffect(() => {
     (async () => {
@@ -166,9 +191,10 @@ export default function GuriQuestLog() {
       try { const t = await window.storage.get(timesKey(dateKey)); if (t?.value) setTimes(JSON.parse(t.value)); } catch (e) {}
       try { const c = await window.storage.get("guri-completed-dates"); if (c?.value) setCompletedDates(JSON.parse(c.value)); } catch (e) {}
       try { const n = await window.storage.get("guri-notes"); if (n?.value) setNotes(JSON.parse(n.value)); } catch (e) {}
-      // earlier days this week, Sunday up to yesterday
+      try { const q = await window.storage.get(`guri-khansq:${weekKey}`); if (q?.value) setKhansQ(JSON.parse(q.value)); } catch (e) {}
+      // earlier days this week, Saturday up to yesterday
       const past = [];
-      for (let i = dayIdx; i >= 1; i--) {
+      for (let i = daysIntoWeek; i >= 1; i--) {
         const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
         try { const t = await window.storage.get(timesKey(dateKeyFor(d))); if (t?.value) past.push(JSON.parse(t.value)); } catch (e) {}
       }
@@ -183,7 +209,7 @@ export default function GuriQuestLog() {
   const phoneMs = phoneTotal(times.phone, now);
   const phoneOn = isPhoneOn(times.phone);
   const kaplanDone = kaplanMs >= KAPLAN_GOAL_MIN * 60000;
-  const checksDone = plan.checks.every((c) => checked[c.id]);
+  const checksDone = allChecks(plan).every((c) => checked[c.id]);
   const allDone = kaplanDone && checksDone;
 
   // this week = earlier days + today
@@ -250,6 +276,15 @@ export default function GuriQuestLog() {
     saveTimes({ study: s, phone: [...times.phone, { type: "start", at: t }] });
   }
 
+  // Khan's HW question counter. Clamped so it can't go below 0 or past the total.
+  async function updateKhansQ(changes) {
+    const next = { ...khansQ, ...changes };
+    next.total = Math.max(1, Math.min(200, Math.round(next.total) || KHANS_DEFAULT_TOTAL));
+    next.done = Math.max(0, Math.min(next.total, Math.round(next.done) || 0));
+    setKhansQ(next);
+    try { await window.storage.set(`guri-khansq:${weekKey}`, JSON.stringify(next)); } catch (e) {}
+  }
+
   // Spread into a brand new object instead of changing the old one, because
   // React only notices a change when it gets a different object.
   async function toggleCheck(id) {
@@ -301,7 +336,7 @@ export default function GuriQuestLog() {
       <TabBar tab={tab} setTab={setTab} />
 
       {tab === "today" && (
-        <TodayTab {...{ plan, dayType, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
+        <TodayTab {...{ plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
       {tab === "schedule" && <ScheduleTab />}
       {tab === "guide" && <GuideTab />}
@@ -338,137 +373,28 @@ function TabBar({ tab, setTab }) {
 }
 
 // ---- TODAY tab -----------------------------------------------------
-function TodayTab({ plan, dayType, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }) {
-  const aimMs = KAPLAN_AIM_MIN * 60000;
-  const goalMs = KAPLAN_GOAL_MIN * 60000;
-  const aimHit = kaplanMs >= aimMs;
-  const kaplanPct = Math.min(100, (kaplanMs / aimMs) * 100);
-  const working = study.status === "working";
-  const onBreak = study.status === "break";
-
-  // Math vs ELA nudge - he did ELA first and started Math late, so Math gets pushed
-  let nudge;
-  if (week.math + week.ela === 0) nudge = "Start with Math today 📐";
-  else if (week.math < week.ela) nudge = `Math is behind this week — start with Math 👉`;
-  else nudge = "Math & ELA are balanced this week 👍";
-
-  const khansLine = dayType === "khans_sat"
-    ? "📝 Khan's HW is due today — hand it in"
-    : `📝 Khan's HW this week: ${formatShort(week.khans)} · due Saturday${dayType === "weekday" && new Date().getDay() === 5 ? " (tomorrow!)" : ""}`;
-
-  const phoneMin = phoneMs / 60000;
-  const phonePct = Math.min(100, (phoneMs / (PHONE_CAP_MIN * 60000)) * 100);
-  const phoneState = phoneMin >= PHONE_CAP_MIN ? "over" : phoneMin >= PHONE_AIM_MIN ? "warn" : "ok";
-  const phoneColor = phoneState === "over" ? "#E06C6C" : phoneState === "warn" ? "#F2C14E" : "#6FA8FF";
-
+// Top to bottom in the order his day goes: green "top" checks, then a box for
+// each kind of work (school → Kaplan → Khan's HW), then the rest of the green
+// list, phone, the PS5 lock, and the time log.
+function TodayTab(props) {
+  const { plan, checked, toggleCheck, study, phoneOn, allDone, spamming, times, justUnlocked, daysCleared } = props;
   return (
     <>
       <div style={{ padding: "0 16px" }}>
         <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "0 2px 10px" }}>{plan.label} · 🌙 DONE BY 10:30</div>
-
         {spamming && <div style={S.spamBanner}>chill lil kid, lock in 🔒</div>}
 
-        {/* ---- study card ---- */}
-        <div style={{ ...S.bigCard, borderColor: working ? "#2E6FF2" : onBreak ? "#F2C14E" : kaplanDone ? "#F2C14E" : "#1E2530" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📚 KAPLAN TODAY</span>
-            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>goal 2h · aim 2h 30m</span>
-          </div>
-          <div style={{ ...S.display, fontSize: 38, color: aimHit || kaplanDone ? "#F2C14E" : "#E8ECF4", marginTop: 4 }}>
-            {formatDuration(kaplanMs)}
-          </div>
-          <div style={{ position: "relative", marginTop: 8 }}>
-            <div style={S.xpTrack}>
-              <div style={{ ...S.xpFill, width: `${kaplanPct}%`, background: kaplanDone ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
-            </div>
-            {/* gold line = the 2h goal the PS5 needs */}
-            <div style={{ position: "absolute", top: -3, left: `${(KAPLAN_GOAL_MIN / KAPLAN_AIM_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
-          </div>
-          <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 7 }}>
-            {aimHit ? "Aim hit 🔥 That's a full day of Kaplan." : kaplanDone ? "PS5 goal hit ✓ Keep going to 2h 30m if you can." : `${formatDuration(goalMs - kaplanMs)} to the PS5 goal (gold line)`}
-          </div>
+        {plan.top.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} />)}
 
-          {/* today's split across everything */}
-          <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 10, lineHeight: 1.7 }}>
-            {CAT_ORDER.map((c) => `${CATEGORIES[c].emoji} ${formatShort(study.byCat[c])}`).join("   ")}
-          </div>
+        <SchoolCard {...props} />
+        <KaplanCard {...props} />
+        <KhansCard {...props} />
 
-          {/* what's happening right now */}
-          <div style={{ ...S.nowLine, color: working ? "#6FA8FF" : onBreak ? "#F2C14E" : "#8A94A8" }}>
-            {working && `${CATEGORIES[study.cat].emoji} ${CATEGORIES[study.cat].label} · ${formatDuration(study.sinceMs)} this stretch`}
-            {onBreak && `☕ On break · ${formatDuration(study.sinceMs)}${study.sinceMs > 15 * 60000 ? " — long break 👀" : ""}`}
-            {!working && !onBreak && "Pick what you're working on 👇"}
-          </div>
+        {plan.bottom.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} />)}
 
-          {/* subject buttons */}
-          <div style={S.catGrid}>
-            {CAT_ORDER.map((c) => {
-              const active = study.cat === c;
-              return (
-                <button key={c} onClick={() => startCat(c)}
-                  style={{ ...S.catBtn, background: active && working ? "#2E6FF2" : active && onBreak ? "rgba(242,193,78,0.15)" : "#161B26", borderColor: active ? (working ? "#2E6FF2" : "#F2C14E") : "#2A3242", color: active && working ? "#fff" : "#C9D2E0" }}>
-                  {CATEGORIES[c].emoji} {CATEGORIES[c].short}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* break / back / stop only show once something is running */}
-          {(working || onBreak) && (
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              {working && <button onClick={takeBreak} style={S.timerBtnBreak}>☕ Break</button>}
-              {onBreak && <button onClick={backToIt} style={S.timerBtnPrimary}>▶ Back to it</button>}
-              <button onClick={stopStudy} style={S.timerBtnGhost}>■ Stop</button>
-            </div>
-          )}
-
-          {/* weekly view */}
-          <div style={S.weekBox}>
-            <div style={{ ...S.mono, fontSize: 10, color: "#7A8598" }}>THIS WEEK: 📐 Math {formatShort(week.math)} · 📖 ELA {formatShort(week.ela)}</div>
-            <div style={{ ...S.body, fontSize: 12, color: week.math < week.ela || week.math + week.ela === 0 ? "#F2C14E" : "#6FE3B4", marginTop: 4 }}>{nudge}</div>
-            <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 6 }}>{khansLine}</div>
-          </div>
-        </div>
-
-        {/* ---- green checklist ---- */}
-        <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "14px 2px 8px" }}>TODAY'S LIST</div>
-        {plan.checks.map((c) => {
-          const on = !!checked[c.id];
-          return (
-            <button key={c.id} onClick={() => toggleCheck(c.id)} aria-label={`${c.title}${on ? ", done" : ""}`}
-              style={{ ...S.checkRow, borderColor: on ? "#3DDC97" : "#17261F", background: on ? "rgba(61,220,151,0.08)" : "#0F1713" }}>
-              <span style={{ ...S.checkbox, borderColor: on ? "#3DDC97" : "#2A4A3E", background: on ? "#3DDC97" : "transparent" }}>
-                {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
-              </span>
-              <span style={{ flex: 1, textAlign: "left" }}>
-                <span style={{ ...S.display, fontSize: 14.5, color: on ? "#6FE3B4" : "#E8ECF4", display: "block", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#2A4A3E" }}>{c.title}</span>
-                <span style={{ ...S.body, fontSize: 12, color: on ? "#556075" : "#8A94A8", display: "block", marginTop: 3, lineHeight: 1.45 }}>{c.desc}</span>
-              </span>
-            </button>
-          );
-        })}
-
-        {/* ---- phone ---- */}
-        <div style={{ ...S.bigCard, borderColor: phoneOn ? phoneColor : "#1E2530", marginTop: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📱 PHONE TODAY</span>
-            <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>max 2h 30m</span>
-          </div>
-          <div style={{ ...S.display, fontSize: 30, color: phoneState === "ok" ? "#E8ECF4" : phoneColor, marginTop: 4 }}>{formatDuration(phoneMs)}</div>
-          <div style={{ position: "relative", marginTop: 8 }}>
-            <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${phonePct}%`, background: phoneColor }} /></div>
-            <div style={{ position: "absolute", top: -3, left: `${(PHONE_AIM_MIN / PHONE_CAP_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
-          </div>
-          <div style={{ ...S.body, fontSize: 12, color: phoneState === "ok" ? "#8A94A8" : phoneColor, marginTop: 7 }}>
-            {phoneState === "over" ? "Time's up. That's the 2.5 hr max." : phoneState === "warn" ? "Past 2 hrs. Try to wrap it up." : "Try to stay under 2 hrs (the yellow line)."}
-          </div>
-          <button onClick={togglePhone} style={{ ...S.bigBtn, background: phoneOn ? "#1E2530" : "#2A3242", color: "#C9D2E0" }}>
-            {phoneOn ? "■ DONE WITH PHONE" : "▶ START PHONE TIME"}
-          </button>
-        </div>
+        <PhoneCard {...props} />
       </div>
 
-      {/* ---- PS5 lock ---- */}
       <div style={{ ...S.lockCard, borderColor: allDone ? "#F2C14E" : "#1E2530", background: allDone ? "rgba(242,193,78,0.07)" : "#0F131B" }}>
         <div style={S.psRow}>{["△", "○", "✕", "□"].map((s, i) => (<span key={i} style={{ ...S.psSym, color: allDone ? "#F2C14E" : "#3A4356", transition: "color 0.5s", transitionDelay: `${i * 0.1}s` }}>{s}</span>))}</div>
         <div style={{ ...S.display, fontSize: 22, letterSpacing: 2, marginTop: 10, color: allDone ? "#F2C14E" : "#556075" }}>{allDone ? "PS5 UNLOCKED" : "PS5 LOCKED"}</div>
@@ -483,6 +409,228 @@ function TodayTab({ plan, dayType, checked, toggleCheck, times, study, kaplanMs,
         <div style={S.toast}><span style={{ ...S.display, fontSize: 14, letterSpacing: 1.5, color: "#0B0E14" }}>🏆 DAY CLEARED — {daysCleared} TOTAL</span></div>
       )}
     </>
+  );
+}
+
+// One green check-off row. Used on its own and inside the work boxes.
+function CheckRow({ item, on, onToggle, compact }) {
+  return (
+    <button onClick={() => onToggle(item.id)} aria-label={`${item.title}${on ? ", done" : ""}`}
+      style={{ ...S.checkRow, marginBottom: compact ? 0 : 9, marginTop: compact ? 10 : 0, borderColor: on ? "#3DDC97" : "#17261F", background: on ? "rgba(61,220,151,0.08)" : "#0F1713" }}>
+      <span style={{ ...S.checkbox, borderColor: on ? "#3DDC97" : "#2A4A3E", background: on ? "#3DDC97" : "transparent" }}>
+        {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
+      </span>
+      <span style={{ flex: 1, textAlign: "left" }}>
+        <span style={{ ...S.display, fontSize: 14.5, color: on ? "#6FE3B4" : "#E8ECF4", display: "block", textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#2A4A3E" }}>{item.title}</span>
+        <span style={{ ...S.body, fontSize: 12, color: on ? "#556075" : "#8A94A8", display: "block", marginTop: 3, lineHeight: 1.45 }}>{item.desc}</span>
+      </span>
+    </button>
+  );
+}
+
+// The "what's happening now" line plus Break / Back / Stop. Only shows inside
+// whichever box is the one currently running.
+function StudyControls({ study, takeBreak, backToIt, stopStudy }) {
+  const working = study.status === "working";
+  return (
+    <>
+      <div style={{ ...S.nowLine, color: working ? "#6FA8FF" : "#F2C14E" }}>
+        {working
+          ? `${CATEGORIES[study.cat].emoji} ${CATEGORIES[study.cat].label} · ${formatDuration(study.sinceMs)} this stretch`
+          : `☕ On break · ${formatDuration(study.sinceMs)}${study.sinceMs > 15 * 60000 ? " — long break 👀" : ""}`}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {working ? <button onClick={takeBreak} style={S.timerBtnBreak}>☕ Break</button>
+                 : <button onClick={backToIt} style={S.timerBtnPrimary}>▶ Back to it</button>}
+        <button onClick={stopStudy} style={S.timerBtnGhost}>■ Stop</button>
+      </div>
+    </>
+  );
+}
+
+// Is this box the one running right now? (cats = which categories belong to it)
+function activeIn(study, cats) {
+  return study.status !== "idle" && cats.includes(study.cat);
+}
+function boxBorder(study, cats, done) {
+  if (activeIn(study, cats)) return study.status === "working" ? "#2E6FF2" : "#F2C14E";
+  return done ? "#3DDC97" : "#1E2530";
+}
+
+// ---- 🏫 school work box ----
+function SchoolCard(props) {
+  const { plan, checked, toggleCheck, study, startCat } = props;
+  const active = activeIn(study, ["school"]);
+  const doneAll = plan.school.length > 0 && plan.school.every((c) => checked[c.id]);
+  return (
+    <div style={{ ...S.bigCard, borderColor: boxBorder(study, ["school"], doneAll) }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>🏫 SCHOOL WORK</span>
+        <span style={{ ...S.display, fontSize: 20, color: "#E8ECF4" }}>{formatDuration(study.byCat.school)}</span>
+      </div>
+      {active ? <StudyControls {...props} /> : (
+        <button onClick={() => startCat("school")} style={{ ...S.bigBtn, background: "#2A3242", color: "#E8ECF4", marginTop: 10 }}>▶ START SCHOOL WORK</button>
+      )}
+      {plan.school.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} compact />)}
+    </div>
+  );
+}
+
+// ---- 📚 Kaplan box (Math + ELA together) ----
+function KaplanCard(props) {
+  const { plan, checked, toggleCheck, study, kaplanMs, kaplanDone, week, startCat } = props;
+  const active = activeIn(study, ["math", "ela"]);
+  const aimMs = KAPLAN_AIM_MIN * 60000;
+  const goalMs = KAPLAN_GOAL_MIN * 60000;
+  const aimHit = kaplanMs >= aimMs;
+  const pct = Math.min(100, (kaplanMs / aimMs) * 100);
+
+  // He did ELA first and started Math late, so Math gets pushed when it's behind.
+  let nudge, nudgeColor = "#F2C14E";
+  if (week.math + week.ela === 0) nudge = "Start with Math 📐";
+  else if (week.math < week.ela) nudge = "Math is behind this week — start with Math 👉";
+  else { nudge = "Math & ELA are balanced this week 👍"; nudgeColor = "#6FE3B4"; }
+
+  return (
+    <div style={{ ...S.bigCard, borderColor: boxBorder(study, ["math", "ela"], kaplanDone) }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📚 KAPLAN</span>
+        <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>goal 2h · aim 2h 30m</span>
+      </div>
+      <div style={{ ...S.display, fontSize: 36, color: kaplanDone ? "#F2C14E" : "#E8ECF4", marginTop: 4 }}>{formatDuration(kaplanMs)}</div>
+      <div style={{ position: "relative", marginTop: 8 }}>
+        <div style={S.xpTrack}>
+          <div style={{ ...S.xpFill, width: `${pct}%`, background: kaplanDone ? "linear-gradient(90deg,#F2C14E,#FFDD87)" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
+        </div>
+        <div style={{ position: "absolute", top: -3, left: `${(KAPLAN_GOAL_MIN / KAPLAN_AIM_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
+      </div>
+      <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 7 }}>
+        {aimHit ? "Aim hit 🔥 That's a full day of Kaplan." : kaplanDone ? "PS5 goal hit ✓ Keep going to 2h 30m if you can." : `${formatDuration(goalMs - kaplanMs)} to the PS5 goal (gold line)`}
+      </div>
+      <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 8 }}>
+        today: 📐 Math {formatShort(study.byCat.math)} · 📖 ELA {formatShort(study.byCat.ela)}
+      </div>
+
+      <div style={{ ...S.catGrid, marginTop: 10 }}>
+        {["math", "ela"].map((c) => {
+          const isOn = study.cat === c && study.status !== "idle";
+          const working = isOn && study.status === "working";
+          return (
+            <button key={c} onClick={() => startCat(c)}
+              style={{ ...S.catBtn, background: working ? "#2E6FF2" : isOn ? "rgba(242,193,78,0.15)" : "#161B26", borderColor: isOn ? (working ? "#2E6FF2" : "#F2C14E") : "#2A3242", color: working ? "#fff" : "#C9D2E0" }}>
+              {CATEGORIES[c].emoji} {CATEGORIES[c].short}
+            </button>
+          );
+        })}
+      </div>
+      {active && <div style={{ marginTop: 2 }}><StudyControls {...props} /></div>}
+
+      <div style={S.weekBox}>
+        <div style={{ ...S.mono, fontSize: 10, color: "#7A8598" }}>THIS WEEK: 📐 Math {formatShort(week.math)} · 📖 ELA {formatShort(week.ela)}</div>
+        <div style={{ ...S.body, fontSize: 12, color: nudgeColor, marginTop: 4 }}>{nudge}</div>
+      </div>
+
+      {plan.kaplan.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} compact />)}
+    </div>
+  );
+}
+
+// ---- 📝 Khan's HW box (time + question counter) ----
+function KhansCard(props) {
+  const { dayType, daysIntoWeek, study, week, khansQ, updateKhansQ, startCat } = props;
+  const [editingTotal, setEditingTotal] = useState(false);
+  const [totalInput, setTotalInput] = useState(String(khansQ.total));
+  const active = activeIn(study, ["khans"]);
+  const { done, total } = khansQ;
+  const pct = Math.round((done / total) * 100);
+  const allDoneQ = done >= total;
+
+  // Pace: the set is due Saturday, so spread it over Sat → Fri (7 days).
+  // By tonight he should be at about (days so far / 7) of the total.
+  const dayNum = daysIntoWeek + 1; // Sat = 1 ... Fri = 7
+  const target = Math.min(total, Math.ceil((total * dayNum) / 7));
+  let pace, paceColor;
+  if (allDoneQ) { pace = "All done ✓ Hand it in Saturday."; paceColor = "#6FE3B4"; }
+  else if (done >= target) { pace = `On pace ✓ (${target} by tonight keeps you on track)`; paceColor = "#6FE3B4"; }
+  else { pace = `Behind — try to get to ${target} by tonight`; paceColor = "#F2C14E"; }
+
+  const due = dayType === "khans_sat" ? "new set today · due next Saturday"
+            : daysIntoWeek === 6 ? "due tomorrow!" : "due Saturday";
+
+  function commitTotal() {
+    const n = parseInt(totalInput, 10);
+    if (!isNaN(n)) updateKhansQ({ total: n });
+    setEditingTotal(false);
+  }
+
+  return (
+    <div style={{ ...S.bigCard, borderColor: boxBorder(study, ["khans"], allDoneQ) }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📝 KHAN'S HW</span>
+        <span style={{ ...S.mono, fontSize: 10.5, color: daysIntoWeek === 6 && !allDoneQ ? "#F2C14E" : "#556075" }}>{due}</span>
+      </div>
+
+      {/* question counter */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
+        <span style={{ ...S.display, fontSize: 36, color: allDoneQ ? "#3DDC97" : "#E8ECF4" }}>{done}</span>
+        {editingTotal ? (
+          <span style={{ ...S.mono, fontSize: 13, color: "#7A8598" }}>
+            / <input autoFocus type="number" value={totalInput} onChange={(e) => setTotalInput(e.target.value)}
+                onBlur={commitTotal} onKeyDown={(e) => { if (e.key === "Enter") commitTotal(); }}
+                style={S.totalInput} aria-label="Total questions this week" />
+          </span>
+        ) : (
+          <button onClick={() => { setTotalInput(String(total)); setEditingTotal(true); }} style={S.totalBtn} aria-label="Change total questions">
+            / {total} questions ✎
+          </button>
+        )}
+        <span style={{ ...S.display, fontSize: 16, color: allDoneQ ? "#3DDC97" : "#6FA8FF", marginLeft: "auto" }}>{pct}%</span>
+      </div>
+      <div style={{ ...S.xpTrack, marginTop: 8 }}>
+        <div style={{ ...S.xpFill, width: `${pct}%`, background: allDoneQ ? "#3DDC97" : "linear-gradient(90deg,#2E6FF2,#6FA8FF)" }} />
+      </div>
+      <div style={{ ...S.body, fontSize: 12, color: paceColor, marginTop: 7 }}>{pace}</div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button onClick={() => updateKhansQ({ done: done - 1 })} style={S.qBtn} aria-label="One less question">−1</button>
+        <button onClick={() => updateKhansQ({ done: done + 1 })} style={{ ...S.qBtn, flex: 2 }} aria-label="One more question">+1</button>
+        <button onClick={() => updateKhansQ({ done: done + 5 })} style={S.qBtn} aria-label="Five more questions">+5</button>
+      </div>
+
+      <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 10 }}>
+        time today {formatShort(study.byCat.khans)} · this week {formatShort(week.khans)}
+      </div>
+      {active ? <StudyControls {...props} /> : (
+        <button onClick={() => startCat("khans")} style={{ ...S.bigBtn, background: "#2A3242", color: "#E8ECF4", marginTop: 10 }}>▶ START KHAN'S HW</button>
+      )}
+    </div>
+  );
+}
+
+// ---- 📱 phone box ----
+function PhoneCard({ phoneMs, phoneOn, togglePhone }) {
+  const phoneMin = phoneMs / 60000;
+  const pct = Math.min(100, (phoneMs / (PHONE_CAP_MIN * 60000)) * 100);
+  const state = phoneMin >= PHONE_CAP_MIN ? "over" : phoneMin >= PHONE_AIM_MIN ? "warn" : "ok";
+  const color = state === "over" ? "#E06C6C" : state === "warn" ? "#F2C14E" : "#6FA8FF";
+  return (
+    <div style={{ ...S.bigCard, borderColor: phoneOn ? color : "#1E2530", marginTop: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>📱 PHONE TODAY</span>
+        <span style={{ ...S.mono, fontSize: 10.5, color: "#556075" }}>max 2h 30m</span>
+      </div>
+      <div style={{ ...S.display, fontSize: 30, color: state === "ok" ? "#E8ECF4" : color, marginTop: 4 }}>{formatDuration(phoneMs)}</div>
+      <div style={{ position: "relative", marginTop: 8 }}>
+        <div style={S.xpTrack}><div style={{ ...S.xpFill, width: `${pct}%`, background: color }} /></div>
+        <div style={{ position: "absolute", top: -3, left: `${(PHONE_AIM_MIN / PHONE_CAP_MIN) * 100}%`, width: 2, height: 14, background: "#F2C14E", borderRadius: 1 }} />
+      </div>
+      <div style={{ ...S.body, fontSize: 12, color: state === "ok" ? "#8A94A8" : color, marginTop: 7 }}>
+        {state === "over" ? "Time's up. That's the 2.5 hr max." : state === "warn" ? "Past 2 hrs. Try to wrap it up." : "Try to stay under 2 hrs (the yellow line)."}
+      </div>
+      <button onClick={togglePhone} style={{ ...S.bigBtn, background: phoneOn ? "#1E2530" : "#2A3242", color: "#C9D2E0" }}>
+        {phoneOn ? "■ DONE WITH PHONE" : "▶ START PHONE TIME"}
+      </button>
+    </div>
   );
 }
 
@@ -535,12 +683,12 @@ function ScheduleTab() {
       </p>
       <SectionLabel text="MON – FRI" />
       <Row n="1" title="Home from school" sub="Snack, chill." />
-      <Row n="2" title="Kaplan ~75 min" sub="Math first if Math is behind this week." />
-      <Row n="3" title="Phone + Kindle" sub="Phone max 2.5 hrs for the whole day, aim under 2." />
-      <Row n="4" title="Kaplan ~75 min" />
-      <Row n="5" title="School HW + a bit of Khan's HW" sub="Friday is the last day before Khan's HW is due." />
-      <Row n="6" title="Dinner" />
-      <Row n="7" title="Finish whatever's left" />
+      <Row n="2" title="School homework" sub="Get it out of the way first." />
+      <Row n="3" title="Kaplan ~75 min" sub="Math first if Math is behind this week." />
+      <Row n="4" title="Phone + Kindle" sub="Phone max 2.5 hrs for the whole day, aim under 2." />
+      <Row n="5" title="Kaplan ~75 min" />
+      <Row n="6" title="Khan's HW — a few questions" sub="Stay on pace so Friday isn't a cram. Update the counter." />
+      <Row n="7" title="Dinner" />
       <Row n="8" title="Done by 10:30" />
 
       <div style={{ height: 18 }} />
@@ -550,7 +698,7 @@ function ScheduleTab() {
       <Row n="3" title="Home, eat, relax" />
       <Row n="4" title="Kaplan ~75 min" />
       <Row n="5" title="Phone + Kindle" />
-      <Row n="6" title="Kaplan ~75 min + start next week's Khan's HW" />
+      <Row n="6" title="Kaplan ~75 min + start the new Khan's HW set" />
       <Row n="7" title="Dinner, then free until 10:30" />
 
       <div style={{ height: 18 }} />
@@ -790,6 +938,9 @@ const S = {
   catGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
   catBtn: { border: "1px solid", borderRadius: 10, padding: "11px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 0.5, cursor: "pointer", transition: "all 0.15s" },
   weekBox: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #1E2530" },
+  qBtn: { flex: 1, border: "1px solid #2A3242", background: "#161B26", color: "#E8ECF4", borderRadius: 10, padding: "10px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, cursor: "pointer" },
+  totalBtn: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#7A8598" },
+  totalInput: { width: 54, background: "#161B26", border: "1px solid #2A3242", borderRadius: 6, color: "#E8ECF4", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, padding: "3px 6px" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
   timerBtnPrimary: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#6FA8FF", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
   timerBtnBreak: { flex: 1, fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: "#0B0E14", background: "#F2C14E", border: "none", borderRadius: 8, padding: "8px 0", cursor: "pointer" },
