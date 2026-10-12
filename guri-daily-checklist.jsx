@@ -159,6 +159,7 @@ export default function GuriQuestLog() {
   const [times, setTimes] = useState(EMPTY_TIMES);   // today's timer logs
   const [weekPast, setWeekPast] = useState([]);      // earlier days this week (Sat → yesterday), for the weekly totals
   const [khansQ, setKhansQ] = useState({ done: 0, total: KHANS_DEFAULT_TOTAL }); // this week's Khan's HW questions
+  const [weekDone, setWeekDone] = useState({}); // this week's Kaplan plan checks, e.g. { m1: true }
   const [now, setNow] = useState(Date.now());
   const [completedDates, setCompletedDates] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -192,6 +193,7 @@ export default function GuriQuestLog() {
       try { const c = await window.storage.get("guri-completed-dates"); if (c?.value) setCompletedDates(JSON.parse(c.value)); } catch (e) {}
       try { const n = await window.storage.get("guri-notes"); if (n?.value) setNotes(JSON.parse(n.value)); } catch (e) {}
       try { const q = await window.storage.get(`guri-khansq:${weekKey}`); if (q?.value) setKhansQ(JSON.parse(q.value)); } catch (e) {}
+      try { const w = await window.storage.get(`guri-kaplanweek:${KAPLAN_WEEK.id}`); if (w?.value) setWeekDone(JSON.parse(w.value)); } catch (e) {}
       // earlier days this week, Saturday up to yesterday
       const past = [];
       for (let i = daysIntoWeek; i >= 1; i--) {
@@ -276,6 +278,14 @@ export default function GuriQuestLog() {
     saveTimes({ study: s, phone: [...times.phone, { type: "start", at: t }] });
   }
 
+  // Kaplan week checklist: saved under the plan's id, not today's date,
+  // so checks carry over from one day to the next.
+  async function toggleWeek(id) {
+    const next = { ...weekDone, [id]: !weekDone[id] };
+    setWeekDone(next);
+    try { await window.storage.set(`guri-kaplanweek:${KAPLAN_WEEK.id}`, JSON.stringify(next)); } catch (e) {}
+  }
+
   // Khan's HW question counter. Clamped so it can't go below 0 or past the total.
   async function updateKhansQ(changes) {
     const next = { ...khansQ, ...changes };
@@ -336,9 +346,9 @@ export default function GuriQuestLog() {
       <TabBar tab={tab} setTab={setTab} />
 
       {tab === "today" && (
-        <TodayTab {...{ plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
+        <TodayTab {...{ weekDone, toggleWeek, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
-      {tab === "todo" && <ToDoTab todayKey={dateKey} />}
+      {tab === "todo" && <ToDoTab weekDone={weekDone} toggleWeek={toggleWeek} />}
       {tab === "schedule" && <ScheduleTab />}
       {tab === "guide" && <GuideTab />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} />}
@@ -532,7 +542,26 @@ function KaplanCard(props) {
         <div style={{ ...S.body, fontSize: 12, color: nudgeColor, marginTop: 4 }}>{nudge}</div>
       </div>
 
+      <KaplanWeekInBox {...props} />
+
       {plan.kaplan.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} compact />)}
+    </div>
+  );
+}
+
+// The week plan inside the Kaplan box. The math rules fold away so the box
+// doesn't get too tall once he knows them.
+function KaplanWeekInBox({ weekDone, toggleWeek }) {
+  const [showHow, setShowHow] = useState(false);
+  return (
+    <div style={S.weekBox}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598" }}>THIS WEEK'S PLAN</span>
+        <button onClick={() => setShowHow(!showHow)} style={{ ...S.mono, fontSize: 10, color: "#F2C14E", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          {showHow ? "hide how-to ▴" : "how math lessons work ▾"}
+        </button>
+      </div>
+      <KaplanChecklist weekDone={weekDone} toggleWeek={toggleWeek} showHowTo={showHow} />
     </div>
   );
 }
@@ -808,168 +837,100 @@ function CalendarTab({ completedDates, todayKey }) {
   );
 }
 
-// ---- TO DO tab -------------------------------------------------------
-// The day-by-day Kaplan book plan (made Oct 12). Each day says exactly which
-// lesson to do for Math and for ELA, so he never has to figure out "what now".
-// Sundays are catch-up days. Anything he didn't check off on an earlier day
-// shows up at the top as "left over", so nothing quietly gets skipped.
-// (skip) marks the lessons to cut first if he falls behind.
-const BOOK_PLAN = {
-  // week 1
-  "2026-10-12": { math: "10.2", ela: "4.6 Perform set — first half" },
-  "2026-10-13": { math: "10.3 Picking Numbers", ela: "4.6 Perform set — finish + check" },
-  "2026-10-14": { math: "10.4 Backsolving", ela: "Redo the ones you got wrong in 4.1" },
-  "2026-10-15": { math: "11.1 Fractions & Decimals", ela: "Redo the ones you got wrong in 4.3" },
-  "2026-10-16": { math: "11.2 Number Lines, Factors & Multiples — first half", ela: "Start 5.1" },
-  "2026-10-17": { math: "11.2 — finish", ela: "5.1 — keep going" },
-  "2026-10-18": { catchup: true },
-  // week 2
-  "2026-10-19": { math: "11.3 Percents", ela: "5.1 — finish" },
-  "2026-10-20": { math: "11.5 Rates", ela: "5.2" },
-  "2026-10-21": { math: "11.6 Ratios", ela: "5.2 — finish" },
-  "2026-10-22": { math: "11.8 Probability", ela: "6.1" },
-  "2026-10-23": { math: "Skim 11.4 + 11.7", mathSkip: true, ela: "6.1 — finish" },
-  "2026-10-24": { math: "12.1", ela: "Catch up on any ELA left over" },
-  "2026-10-25": { catchup: true },
-  // week 3
-  "2026-10-26": { math: "12.2", ela: "6.2" },
-  "2026-10-27": { math: "12.3", ela: "6.2 — finish" },
-  "2026-10-28": { math: "14.3 Word Problems: Algebra", ela: "7.1" },
-  "2026-10-29": { math: "14.3 — finish", ela: "7.1 — finish" },
-  "2026-10-30": { math: "14.1 Word Problems: Arithmetic", ela: "Catch up on any ELA left over" },
-  "2026-10-31": { math: "14.1 — finish", ela: "Redo your ELA post-its" },
-  "2026-11-01": { catchup: true },
-  // week 4
-  "2026-11-02": { math: "13.1 Geometry", ela: "7.2" },
-  "2026-11-03": { math: "13.2 Geometry", ela: "7.2 — finish" },
-  "2026-11-04": { math: "13.3 Geometry", ela: "7.3" },
-  "2026-11-05": { math: "13.4 Geometry", ela: "7.3 — finish" },
-  "2026-11-06": { math: "14.4", ela: "Catch up on any ELA left over" },
-  "2026-11-07": { math: "14.4 — finish", ela: "Redo your ELA post-its" },
-  "2026-11-08": { catchup: true },
-  // week 5 — test week
-  "2026-11-09": { math: "14.2", ela: "Chapter 8", elaSkip: true },
-  "2026-11-10": { math: "15.3 Surveys", ela: "Chapter 17" },
-  "2026-11-11": { math: "Ch 16 Mixed Perform Set", ela: "Chapter 18" },
-  "2026-11-12": { math: "Ch 16 Mixed Perform Set — keep going", ela: "Light review: your post-its" },
+// ---- this week's Kaplan plan -----------------------------------------
+// A plain checklist he works down at his own pace. Checks are saved for the
+// whole week (not per day), so tomorrow he picks up right where he stopped.
+// To give him a new week: change the id and the lists below.
+const KAPLAN_WEEK = {
+  id: "2026-10-12",
+  math: [
+    { id: "m1", lesson: "Lesson 10.1", page: "page 300", text: "Redo only the questions you got wrong before." },
+    { id: "m2", lesson: "Lesson 10.2", page: "page 306", text: "Perform questions just before page 315." },
+    { id: "m3", lesson: "Lesson 10.3", page: "page 315", text: "Perform questions just before page 320." },
+    { id: "m4", lesson: "Lesson 10.4", page: "page 320", text: "Perform questions just before page 325." },
+    { id: "m5", lesson: "Lesson 11.1", page: "page 326", text: "Perform questions just before page 334." },
+    { id: "m6", lesson: "Lesson 11.2", page: "page 334", text: "Perform questions just before page 343." },
+    { id: "m7", lesson: "Lesson 11.3", page: "page 343", text: "Perform questions just before page 350." },
+  ],
+  ela: [
+    { id: "e1", lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before." },
+    { id: "e2", lesson: "Lesson 4.3", page: "pages 78–94", text: "Redo only your wrong ones." },
+    { id: "e3", lesson: "Lesson 4.6", page: "page 119", text: "Skip the reading. Do only the Perform questions just before page 137." },
+    { id: "e4", lesson: "Lesson 5.1", page: "page 138", text: "Do the full lesson." },
+    { id: "e5", lesson: "Lesson 5.2", page: "page 154", text: "Do the full lesson." },
+  ],
 };
-const PLAN_DATES = Object.keys(BOOK_PLAN).sort();
+const MATH_ANSWERS_PAGE = 641;
+const ELA_ANSWERS_PAGE = 533;
 
-// What the checkboxes are for one plan day (empty for catch-up days)
-function tasksFor(key) {
-  const p = BOOK_PLAN[key];
-  if (!p || p.catchup) return [];
-  return [
-    { id: "math", emoji: "📐", label: "Math", text: p.math, skip: p.mathSkip, hint: "~7 pages · about 1h 15m · do this FIRST" },
-    { id: "ela", emoji: "📖", label: "ELA", text: p.ela, skip: p.elaSkip, hint: "~6 pages · about 45 min" },
-  ];
-}
-function shortDate(key) {
-  const [y, m, d] = key.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return `${DAY_NAMES[dt.getDay()].slice(0, 3)} ${m}/${d}`;
-}
-
-function ToDoTab({ todayKey }) {
-  const [done, setDone] = useState({}); // { "2026-10-12": { math: true }, ... }
-  const [loaded, setLoaded] = useState(false);
-
-  // load every plan day up to today, so left-over tasks can be found
-  useEffect(() => {
-    (async () => {
-      const all = {};
-      for (const k of PLAN_DATES) {
-        if (k > todayKey) break;
-        try { const r = await window.storage.get(`guri-todo:${k}`); if (r?.value) all[k] = JSON.parse(r.value); } catch (e) {}
-      }
-      setDone(all);
-      setLoaded(true);
-    })();
-  }, [todayKey]);
-
-  async function toggle(dayKey, id) {
-    const day = { ...(done[dayKey] || {}), [id]: !(done[dayKey] || {})[id] };
-    setDone({ ...done, [dayKey]: day });
-    try { await window.storage.set(`guri-todo:${dayKey}`, JSON.stringify(day)); } catch (e) {}
-  }
-
-  if (!loaded) return null;
-
-  const today = BOOK_PLAN[todayKey];
-  const todayTasks = tasksFor(todayKey);
-  // earlier days' unchecked tasks
-  const leftovers = PLAN_DATES.filter((k) => k < todayKey)
-    .flatMap((k) => tasksFor(k).filter((t) => !(done[k] || {})[t.id]).map((t) => ({ ...t, dayKey: k })));
-  const afterPlan = todayKey > PLAN_DATES[PLAN_DATES.length - 1];
-  const beforePlan = todayKey < PLAN_DATES[0];
-  const todayAllDone = todayTasks.length > 0 && todayTasks.every((t) => (done[todayKey] || {})[t.id]);
-
-  const TaskRow = ({ t, dayKey, showDay }) => {
-    const on = !!(done[dayKey] || {})[t.id];
+// The checklist itself. Used inside the Kaplan box and on the To Do tab,
+// both reading/writing the same saved checks.
+function KaplanChecklist({ weekDone, toggleWeek, showHowTo }) {
+  const Section = ({ title, answers, items }) => {
+    const next = items.find((i) => !weekDone[i.id]); // first unchecked = where he left off
+    const count = items.filter((i) => weekDone[i.id]).length;
     return (
-      <button onClick={() => toggle(dayKey, t.id)} aria-label={`${t.label}: ${t.text}${on ? ", done" : ""}`}
-        style={{ ...S.checkRow, borderColor: on ? "#3DDC97" : "#1E2530", background: on ? "rgba(61,220,151,0.08)" : "#12161F" }}>
-        <span style={{ ...S.checkbox, borderColor: on ? "#3DDC97" : "#3A4356", background: on ? "#3DDC97" : "transparent" }}>
-          {on && <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>✓</span>}
-        </span>
-        <span style={{ flex: 1, textAlign: "left" }}>
-          <span style={{ ...S.mono, fontSize: 10, letterSpacing: 1, color: "#7A8598", display: "block" }}>
-            {t.emoji} {t.label.toUpperCase()}{showDay ? ` · from ${shortDate(dayKey)}` : ""}{t.skip ? " · skip if behind" : ""}
-          </span>
-          <span style={{ ...S.display, fontSize: 16, color: on ? "#6FE3B4" : "#E8ECF4", display: "block", marginTop: 3, textDecorationLine: on ? "line-through" : "none", textDecorationColor: "#2A4A3E" }}>{t.text}</span>
-          {!showDay && <span style={{ ...S.body, fontSize: 12, color: on ? "#556075" : "#8A94A8", display: "block", marginTop: 3 }}>{t.hint}</span>}
-        </span>
-      </button>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 6px" }}>
+          <span style={{ ...S.display, fontSize: 14, color: "#E8ECF4" }}>{title}</span>
+          <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length} · answers p.{answers}</span>
+        </div>
+        {items.map((i) => {
+          const on = !!weekDone[i.id];
+          const isNext = next && next.id === i.id;
+          return (
+            <button key={i.id} onClick={() => toggleWeek(i.id)} aria-label={`${i.lesson}${on ? ", done" : ""}`}
+              style={{ ...S.weekRow, borderColor: on ? "#2A4A3E" : isNext ? "#6FA8FF" : "#1E2530", background: on ? "rgba(61,220,151,0.06)" : isNext ? "rgba(46,111,242,0.08)" : "#0F131B" }}>
+              <span style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: on ? "#3DDC97" : "#3A4356", background: on ? "#3DDC97" : "transparent" }}>
+                {on && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
+              </span>
+              <span style={{ flex: 1, textAlign: "left" }}>
+                <span style={{ ...S.display, fontSize: 13.5, color: on ? "#556075" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none" }}>
+                  {i.lesson} <span style={{ ...S.mono, fontSize: 10.5, color: on ? "#3A4356" : "#6FA8FF", fontWeight: 400 }}>({i.page})</span>
+                </span>
+                <span style={{ ...S.body, fontSize: 12, color: on ? "#3A4356" : "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>
+              </span>
+              {isNext && <span style={{ ...S.mono, fontSize: 9, color: "#6FA8FF", alignSelf: "center" }}>NEXT</span>}
+            </button>
+          );
+        })}
+      </div>
     );
   };
+  return (
+    <div>
+      {showHowTo && (
+        <div style={S.howBox}>
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#F2C14E" }}>HOW EVERY MATH LESSON WORKS</div>
+          <ol style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.6 }}>
+            <li>Do the <b>Perform</b> questions at the end of the lesson first.</li>
+            <li>Check them in the back (Math answers start page {MATH_ANSWERS_PAGE}).</li>
+            <li>Most right → go to the next lesson.</li>
+            <li>Missed a lot → do the lesson from its first page, then redo the Perform questions.</li>
+          </ol>
+          <div style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", marginTop: 8 }}>
+            Every wrong answer goes on a post-it. Redo them all on Sunday.
+          </div>
+        </div>
+      )}
+      <Section title="📐 Math" answers={MATH_ANSWERS_PAGE} items={KAPLAN_WEEK.math} />
+      <Section title="📖 ELA" answers={ELA_ANSWERS_PAGE} items={KAPLAN_WEEK.ela} />
+    </div>
+  );
+}
 
+// ---- TO DO tab -------------------------------------------------------
+// Same checklist as the Kaplan box, with room to breathe and the rules on top.
+function ToDoTab({ weekDone, toggleWeek }) {
+  const all = [...KAPLAN_WEEK.math, ...KAPLAN_WEEK.ela];
+  const doneCount = all.filter((i) => weekDone[i.id]).length;
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text={`KAPLAN BOOK · ${shortDate(todayKey).toUpperCase()}`} />
-
-      {beforePlan && <p style={S.todoNote}>The book plan starts {shortDate(PLAN_DATES[0])}.</p>}
-      {afterPlan && (
-        <div style={S.todoBig}>
-          <div style={{ ...S.display, fontSize: 18, color: "#F2C14E" }}>Test time 🎯</div>
-          <p style={S.todoNote}>No new lessons. Flip through your post-its, get good sleep, eat breakfast. You've got this.</p>
-        </div>
-      )}
-
-      {today && today.catchup && (
-        <div style={S.todoBig}>
-          <div style={{ ...S.display, fontSize: 18, color: "#E8ECF4" }}>Catch-up day 🧹</div>
-          <p style={S.todoNote}>No new lessons today. Finish anything left over below, then do your post-it redo.</p>
-        </div>
-      )}
-
-      {todayTasks.length > 0 && (
-        <>
-          <div style={{ ...S.display, fontSize: 18, color: "#E8ECF4", margin: "2px 0 10px" }}>Today, in this order:</div>
-          {todayTasks.map((t) => <TaskRow key={t.id} t={t} dayKey={todayKey} />)}
-          {todayAllDone && <div style={{ ...S.body, fontSize: 13, color: "#3DDC97", textAlign: "center", margin: "4px 0 10px" }}>Book work done for today ✓</div>}
-        </>
-      )}
-
-      {leftovers.length > 0 && (
-        <>
-          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#F2C14E", margin: "16px 2px 8px" }}>
-            ⚠ LEFT OVER FROM BEFORE ({leftovers.length})
-          </div>
-          <p style={{ ...S.body, fontSize: 12, color: "#8A94A8", margin: "0 2px 10px", lineHeight: 1.5 }}>
-            Do these when you can. Already did it? Just check it off.
-          </p>
-          {leftovers.map((t) => <TaskRow key={t.dayKey + t.id} t={t} dayKey={t.dayKey} showDay />)}
-        </>
-      )}
-
-      {!beforePlan && !afterPlan && (
-        <div style={{ ...S.restRule, margin: "16px 0 4px" }}>
-          <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>HOW</span>
-          <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 13, lineHeight: 1.6 }}>
-            Start the Kaplan timer on the Today tab, then do the lesson. Check your answers every couple pages. Post-it anything you got wrong. Practice tests are done at Khan's, not here.
-          </p>
-        </div>
-      )}
+      <SectionLabel text="THIS WEEK'S KAPLAN PLAN" />
+      <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 10px" }}>
+        Work down the list. Check things off as you go. Tomorrow, start at the one marked <span style={{ color: "#6FA8FF" }}>NEXT</span>. {doneCount}/{all.length} done.
+      </p>
+      <KaplanChecklist weekDone={weekDone} toggleWeek={toggleWeek} showHowTo />
     </div>
   );
 }
@@ -1109,6 +1070,8 @@ const S = {
   qBtn: { flex: 1, border: "1px solid #2A3242", background: "#161B26", color: "#E8ECF4", borderRadius: 10, padding: "10px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, cursor: "pointer" },
   totalBtn: { background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#7A8598" },
   totalInput: { width: 54, background: "#161B26", border: "1px solid #2A3242", borderRadius: 6, color: "#E8ECF4", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, padding: "3px 6px" },
+  weekRow: { display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginBottom: 6, borderRadius: 10, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
+  howBox: { marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
