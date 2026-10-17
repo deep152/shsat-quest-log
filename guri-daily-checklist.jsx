@@ -39,8 +39,8 @@ const C = {
   home:     { id: "home",     title: "Home from school",       desc: "Snack, relax, decompress." },
   schoolhw: { id: "schoolhw", title: "Homework done",          desc: "Whatever's due tomorrow." },
   schoolmon:{ id: "schoolhw", title: "Homework for Monday done", desc: "Get it out of the way." },
-  checked:  { id: "checked",  title: "Checked my answers",     desc: "Every couple pages. Wrong ones got a post-it with one line on why." },
-  postit:   { id: "postit",   title: "Post-it redo (weekly)",  desc: "Every page with a post-it, try it again. Got it? Rip it out." },
+  checked:  { id: "checked",  title: "Checked my answers",     desc: "Marked every one right/wrong, figured out the wrong ones, post-its on. Redid today's post-its at the end." },
+  postit:   { id: "postit",   title: "Post-its still left",    desc: "Redo every post-it still in the book. Got it? Take it off. Missed it? It stays." },
   kindle:   { id: "kindle",   title: "Kindle 1hr+",            desc: "No cap on this one." },
   dinner:   { id: "dinner",   title: "Dinner",                 desc: "Whenever it's ready." },
   nophone:  { id: "nophone",  title: "No phone before Khan's", desc: "Kindle in the morning is fine." },
@@ -100,6 +100,9 @@ function readStudy(log, now) {
   const status = mode === "work" ? "working" : mode === "break" ? "break" : "idle";
   return { byCat, breakMs, breakCount, status, cat: mode ? cat : null, sinceMs: mode ? now - since : 0 };
 }
+// Time of the last thing that happened in a log. Used as "now" for past days,
+// so a session he forgot to stop doesn't count as running forever.
+function lastAt(log) { return log.length ? log[log.length - 1].at : 0; }
 // Phone is simpler - just start/stop.
 function isPhoneOn(log) { return log.length > 0 && log[log.length - 1].type === "start"; }
 function phoneTotal(log, now) {
@@ -217,7 +220,7 @@ export default function GuriQuestLog() {
   // this week = earlier days + today
   const week = { math: study.byCat.math, ela: study.byCat.ela, khans: study.byCat.khans };
   for (const t of weekPast) {
-    const r = readStudy(t.study || [], 0);
+    const r = readStudy(t.study || [], lastAt(t.study || []));
     week.math += r.byCat.math; week.ela += r.byCat.ela; week.khans += r.byCat.khans;
   }
 
@@ -280,8 +283,12 @@ export default function GuriQuestLog() {
 
   // Kaplan week checklist: saved under the plan's id, not today's date,
   // so checks carry over from one day to the next.
+  // Saves the DATE it was checked (not just true), so the calendar can show
+  // what got done on which day. Older checks saved as plain true still count as done.
   async function toggleWeek(id) {
-    const next = { ...weekDone, [id]: !weekDone[id] };
+    const next = { ...weekDone };
+    if (next[id]) delete next[id];
+    else next[id] = dateKey;
     setWeekDone(next);
     try { await window.storage.set(`guri-kaplanweek:${KAPLAN_PLAN.id}`, JSON.stringify(next)); } catch (e) {}
   }
@@ -350,8 +357,8 @@ export default function GuriQuestLog() {
       )}
       {tab === "todo" && <ToDoTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} />}
       {tab === "schedule" && <ScheduleTab />}
-      {tab === "guide" && <GuideTab />}
-      {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} />}
+      {tab === "guide" && <PostItsTab />}
+      {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
 
       <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
       <BackupPanel {...{ completedDates, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
@@ -366,7 +373,7 @@ function TabBar({ tab, setTab }) {
     { id: "today", label: "Today" },
     { id: "todo", label: "To Do" },
     { id: "schedule", label: "Schedule" },
-    { id: "guide", label: "Sticky Notes" },
+    { id: "guide", label: "Post-its" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -549,12 +556,31 @@ function KaplanCard(props) {
   );
 }
 
-// Inside the Kaplan box: only what's NEXT in each subject, so the box stays
-// short. The full plan with dates lives on the To Do tab.
+// Inside the Kaplan box: what he checked off today (still crossed off, tap to
+// undo - so a mis-tap never makes something vanish) and what's NEXT in each
+// subject. The full plan with dates lives on the To Do tab.
 function KaplanWeekInBox({ weekDone, toggleWeek, todayKey }) {
   const [showHow, setShowHow] = useState(false);
-  const next = (items) => items.find((i) => !weekDone[i.id]);
-  const rows = [["📐 Math", next(KAPLAN_PLAN.math)], ["📖 ELA", next(KAPLAN_PLAN.ela)]];
+  const section = (label, items) => {
+    const doneToday = items.filter((i) => weekDone[i.id] === todayKey);
+    const next = items.find((i) => !weekDone[i.id]);
+    return (
+      <div key={label} style={{ marginTop: 8 }}>
+        <div style={{ ...S.mono, fontSize: 10, color: "#7A8598", margin: "0 2px 4px" }}>{label}</div>
+        {doneToday.map((i) => <PlanRow key={i.id} i={i} on toggleWeek={toggleWeek} />)}
+        {next ? (
+          <>
+            <PlanRow i={next} on={false} isNext late={next.due < todayKey} toggleWeek={toggleWeek} showDue />
+            {TOPICS[next.id] && (
+              <a href={youtubeLink(TOPICS[next.id])} target="_blank" rel="noopener noreferrer" style={S.ytLink}>
+                ▶ YouTube: {TOPICS[next.id]}
+              </a>
+            )}
+          </>
+        ) : <div style={{ ...S.body, fontSize: 12.5, color: "#3DDC97", margin: "0 2px" }}>All done ✓</div>}
+      </div>
+    );
+  };
   return (
     <div style={S.weekBox}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -564,13 +590,8 @@ function KaplanWeekInBox({ weekDone, toggleWeek, todayKey }) {
         </button>
       </div>
       {showHow && <HowToBox />}
-      {rows.map(([label, i]) => (
-        <div key={label} style={{ marginTop: 8 }}>
-          <div style={{ ...S.mono, fontSize: 10, color: "#7A8598", margin: "0 2px 4px" }}>{label}</div>
-          {i ? <PlanRow i={i} on={false} isNext late={i.due < todayKey} toggleWeek={toggleWeek} showDue />
-             : <div style={{ ...S.body, fontSize: 12.5, color: "#3DDC97", margin: "0 2px" }}>All done ✓</div>}
-        </div>
-      ))}
+      {section("📐 Math", KAPLAN_PLAN.math)}
+      {section("📖 ELA", KAPLAN_PLAN.ela)}
       <PaceLine weekDone={weekDone} todayKey={todayKey} />
       <div style={{ ...S.mono, fontSize: 10, color: "#556075", margin: "6px 2px 0" }}>full plan with dates → To Do tab</div>
     </div>
@@ -764,17 +785,17 @@ function ScheduleTab() {
   );
 }
 
-// ---- STICKY NOTES guide tab -----------------------------------------
-// Kept this short on purpose. The first version had 5 steps and a nightly review,
-// and it was too much to remember mid-study. This is the version he actually does.
-function GuideTab() {
-  const Step = ({ n, title, desc, tip }) => (
+// ---- POST-ITS tab -----------------------------------------------------
+// The full method for every lesson, step by step. The Kaplan box and To Do tab
+// only show a short version and point here.
+function PostItsTab() {
+  const Step = ({ n, title, children, tip }) => (
     <div style={S.guideCard}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
         <div style={S.guideNum}>{n}</div>
         <div style={{ flex: 1 }}>
           <div style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</div>
-          <p style={{ ...S.body, fontSize: 13, color: "#B8C2D4", margin: "6px 0 0", lineHeight: 1.6 }}>{desc}</p>
+          <div style={{ ...S.body, fontSize: 13, color: "#B8C2D4", margin: "6px 0 0", lineHeight: 1.6 }}>{children}</div>
           {tip && <div style={S.guideTip}>{tip}</div>}
         </div>
       </div>
@@ -782,47 +803,140 @@ function GuideTab() {
   );
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "4px 0 16px" }}>
-        How to check your Kaplan work. Three steps, that's it.
+      <SectionLabel text="HOW EVERY LESSON WORKS" />
+      <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 14px" }}>
+        Same steps every time. ELA lessons that say "do the full lesson" start at step 3.
       </p>
-      <Step n="1" title="Do a couple pages" desc="Answer key closed while you work. Finish 2–3 pages before you check anything." tip="Don't check after every single question. On the real test you can't go back and change answers, so practice committing to one and moving on." />
-      <Step n="2" title="Check right away" desc="Flip to the answer key. Got one wrong? Read the explanation until you actually get WHY, not just what the right letter is." />
-      <Step n="3" title="Post-it it" desc="Stick a post-it on the question you missed. Write one line on it: what you messed up. Like 'forgot the negative sign' or 'didn't reread the question.'" />
-      <Step n="★" title="Sunday: Post-it Redo" desc="Once a week, go through every page with a post-it and try the question again. Got it? Rip the post-it out, it's fixed. Missed it again? It stays for next Sunday." />
+
+      <Step n="1" title="Perform set first">
+        Don't read the lesson yet. Do the <b>Perform</b> questions at the end of it, then check them in the back.
+        <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 6 }}>Math answers p.{MATH_ANSWERS_PAGE} · ELA answers p.{ELA_ANSWERS_PAGE}</div>
+      </Step>
+
+      <Step n="2" title="Decide" tip="Guessing and getting lucky doesn't count. If you weren't sure how to do it, do the lesson.">
+        <div>✅ Got <b>4–5 right</b> and you actually knew how → <b>next lesson</b>.</div>
+        <div style={{ marginTop: 4 }}>📖 Got fewer, or guessed on some → <b>do the lesson</b> (step 3).</div>
+      </Step>
+
+      <Step n="3" title="Do the lesson">
+        Start from its first page. Check every question as you go and mark each one with a red pen or highlighter: <b>✓ right</b> or <b>✗ wrong</b>.
+      </Step>
+
+      <Step n="4" title="Figure out every wrong one" tip={<>Ask AI like this: <i>"Explain [the topic] for the SHSAT like I'm in 8th grade. Show one example, then give me 3 practice questions and check my answers."</i></>}>
+        Read the explanation in the back. Still don't get it? Watch a <b>YouTube</b> video on the topic, or ask <b>ChatGPT or Gemini</b>. Don't move on until you could explain it to someone else.
+      </Step>
+
+      <Step n="5" title="Redo the Perform set">
+        Same as the lesson: mark right/wrong, figure out every wrong one.
+      </Step>
+
+      <Step n="6" title="Notebook, then post-it">
+        Redo every wrong question in your <b>notebook</b> without looking. Then stick a <b>post-it</b> on that question in the book with:
+        <div style={{ marginTop: 4 }}>• the page and question number</div>
+        <div>• one line on why you missed it, like <i>"forgot the negative sign"</i>, <i>"didn't know the rule"</i>, <i>"rushed"</i></div>
+      </Step>
+
+      <div style={{ height: 8 }} />
+      <SectionLabel text="WHEN TO REDO POST-ITS" />
+      <Step n="🌙" title="End of every session">
+        Redo that day's post-its <b>without looking</b>. Got it? Take the post-it off. Missed it? It stays.
+      </Step>
+      <Step n="☀️" title="Start of the next session (5 min)">
+        Redo whatever post-its are still left from yesterday.
+      </Step>
+      <Step n="📅" title="Sunday">
+        Redo any post-its still left in the book from the week.
+      </Step>
     </div>
   );
 }
 
 // ---- CALENDAR tab -----------------------------------------------------
-function CalendarTab({ completedDates, todayKey }) {
+// Each day shows Kaplan time and how many plan items got checked off that day
+// out of how many were planned. Tap a day to see its list.
+//   green  = 3h+ of Kaplan AND everything planned for that day got done
+//   orange = one of the two
+//   red    = neither
+// Days with nothing planned (catch-up Sundays) are judged on time only.
+const CAL_HOURS_GOAL = 3;
+const ALL_PLAN = () => [...KAPLAN_PLAN.math.map((i) => ({ ...i, subj: "📐" })), ...KAPLAN_PLAN.ela.map((i) => ({ ...i, subj: "📖" }))];
+const PLAN_START = "2026-10-12";
+// Check-off dates only started being saved Oct 17, so days before that show
+// Kaplan time but aren't colored or judged on lessons.
+const DATES_SAVED_FROM = "2026-10-17";
+
+// 11400000 -> "3h10", 2700000 -> "45m"
+function formatCell(ms) {
+  const min = Math.floor(ms / 60000);
+  if (min === 0) return "0m";
+  const h = Math.floor(min / 60), m = min % 60;
+  return h ? `${h}h${m ? String(m).padStart(2, "0") : ""}` : `${m}m`;
+}
+
+function CalendarTab({ completedDates, todayKey, weekDone, todayTimes }) {
   const [offset, setOffset] = useState(0); // how many months forward/back from today
+  const [picked, setPicked] = useState(todayKey);
+  const [dayTimes, setDayTimes] = useState({}); // { "2026-10-20": { study: [...], phone: [...] } }
   const base = new Date();
   const viewDate = new Date(base.getFullYear(), base.getMonth() + offset, 1);
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const monthLabel = viewDate.toLocaleString("en-US", { month: "long", year: "numeric" });
-  const firstWeekday = new Date(year, month, 1).getDay(); // which weekday the 1st falls on, so I know how many blank cells to pad the grid with
-  // Little date trick: "day 0" of next month rolls back to the last day of THIS month.
-  // That's the easiest way in plain JS to find out how many days a month has.
+  const firstWeekday = new Date(year, month, 1).getDay(); // blank cells before the 1st
+  // "day 0" of next month rolls back to the last day of THIS month = how many days it has
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
-  for (let i = 0; i < firstWeekday; i++) cells.push(null); // blank cells before day 1
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-
-  const completedSet = new Set(completedDates);
   const keyFor = (d) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-  const monthClearedCount = cells.filter((d) => d && completedSet.has(keyFor(d))).length;
+  // load the saved timer logs for every past day in the month being shown
+  useEffect(() => {
+    (async () => {
+      const out = {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        const k = keyFor(d);
+        if (k >= todayKey) break;
+        try { const r = await window.storage.get(`guri-study:${k}`); if (r?.value) out[k] = JSON.parse(r.value); } catch (e) {}
+      }
+      setDayTimes(out);
+    })();
+  }, [year, month, todayKey]);
+
+  const completedSet = new Set(completedDates);
+  const plan = ALL_PLAN();
+
+  // everything about one day, worked out from the logs and the plan
+  function dayInfo(k) {
+    const t = k === todayKey ? todayTimes : dayTimes[k];
+    const log = (t && t.study) || [];
+    const r = readStudy(log, k === todayKey ? Date.now() : lastAt(log));
+    const kaplanMs = r.byCat.math + r.byCat.ela;
+    const planned = plan.filter((i) => i.due === k);
+    const doneHere = plan.filter((i) => weekDone[i.id] === k);
+    const hoursOK = kaplanMs >= CAL_HOURS_GOAL * 3600000;
+    const lessonsOK = planned.length === 0 ? true : doneHere.length >= planned.length;
+    const tracked = k >= PLAN_START && k <= todayKey;
+    const judged = k >= DATES_SAVED_FROM;
+    let color = null;
+    if (tracked && judged && k < todayKey) color = hoursOK && lessonsOK ? "ok" : hoursOK || lessonsOK ? "mid" : "bad";
+    if (k === todayKey && hoursOK && lessonsOK) color = "ok";
+    return { kaplanMs, byCat: r.byCat, planned, doneHere, hoursOK, lessonsOK, tracked, judged, color, cleared: completedSet.has(k) };
+  }
+  const COLORS = {
+    ok:  { bg: "rgba(61,220,151,0.14)",  text: "#3DDC97" },
+    mid: { bg: "rgba(242,193,78,0.14)",  text: "#F2C14E" },
+    bad: { bg: "rgba(224,108,108,0.14)", text: "#E06C6C" },
+  };
+
+  const pickedInfo = picked ? dayInfo(picked) : null;
 
   return (
     <div style={{ padding: "4px 16px 4px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <button onClick={() => setOffset((o) => o - 1)} style={S.navBtn}>‹</button>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ ...S.display, fontSize: 16, color: "#E8ECF4" }}>{monthLabel}</div>
-          <div style={{ ...S.mono, fontSize: 10, color: "#7A8598", marginTop: 2 }}>{monthClearedCount} day{monthClearedCount === 1 ? "" : "s"} cleared</div>
-        </div>
-        <button onClick={() => setOffset((o) => o + 1)} style={S.navBtn}>›</button>
+        <button onClick={() => setOffset((o) => o - 1)} style={S.navBtn} aria-label="Previous month">‹</button>
+        <div style={{ ...S.display, fontSize: 16, color: "#E8ECF4" }}>{monthLabel}</div>
+        <button onClick={() => setOffset((o) => o + 1)} style={S.navBtn} aria-label="Next month">›</button>
       </div>
 
       <div style={S.calGrid}>
@@ -830,20 +944,82 @@ function CalendarTab({ completedDates, todayKey }) {
         {cells.map((d, i) => {
           if (!d) return <div key={i} />;
           const k = keyFor(d);
+          const info = dayInfo(k);
+          const c = info.color ? COLORS[info.color] : null;
           const isToday = k === todayKey;
-          const isDone = completedSet.has(k);
+          const isPicked = k === picked;
+          const showNums = info.tracked && (info.kaplanMs > 0 || info.planned.length > 0 || info.doneHere.length > 0);
           return (
-            <div key={i} style={{ ...S.calCell, borderColor: isToday ? "#6FA8FF" : "transparent", background: isDone ? "rgba(242,193,78,0.12)" : "transparent" }}>
-              <span style={{ ...S.mono, fontSize: 11, color: isDone ? "#F2C14E" : isToday ? "#6FA8FF" : "#8A94A8" }}>{d}</span>
-              {isDone && <span style={{ fontSize: 9, color: "#F2C14E", marginTop: 1 }}>✓</span>}
-            </div>
+            <button key={i} onClick={() => setPicked(k)} aria-label={`${shortDate(k)}`}
+              style={{ ...S.calCell, cursor: "pointer", padding: 0, fontFamily: "inherit",
+                borderColor: isPicked ? "#E8ECF4" : isToday ? "#6FA8FF" : "transparent",
+                background: c ? c.bg : "transparent" }}>
+              <span style={{ ...S.mono, fontSize: 11, color: isToday ? "#6FA8FF" : c ? c.text : "#8A94A8" }}>{d}</span>
+              {showNums && (
+                <>
+                  <span style={{ ...S.mono, fontSize: 8.5, color: "#C9D2E0", lineHeight: 1.2 }}>{formatCell(info.kaplanMs)}</span>
+                  <span style={{ ...S.mono, fontSize: 8.5, color: "#8A94A8", lineHeight: 1.2 }}>
+                    {!info.judged ? "" : info.planned.length ? `${info.doneHere.length}/${info.planned.length}` : info.doneHere.length ? `+${info.doneHere.length}` : ""}
+                  </span>
+                </>
+              )}
+            </button>
           );
         })}
       </div>
 
-      <p style={{ ...S.body, fontSize: 11.5, color: "#556075", textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
-        Gold = full day cleared. Blue outline = today.
+      <p style={{ ...S.body, fontSize: 11, color: "#556075", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
+        Each day: Kaplan time · lessons done / planned.<br />
+        <span style={{ color: "#3DDC97" }}>Green</span> = {CAL_HOURS_GOAL}h+ and planned lessons done · <span style={{ color: "#F2C14E" }}>orange</span> = one · <span style={{ color: "#E06C6C" }}>red</span> = neither
       </p>
+
+      {pickedInfo && <DayDetail k={picked} info={pickedInfo} todayKey={todayKey} weekDone={weekDone} />}
+    </div>
+  );
+}
+
+// The list that shows up under the calendar for the day you tap.
+function DayDetail({ k, info, todayKey, weekDone }) {
+  const isPast = k < todayKey;
+  const isFuture = k > todayKey;
+  const statusFor = (i) => {
+    const when = weekDone[i.id];
+    if (when) return { on: true, note: typeof when === "string" ? (when === k ? "done" : `done ${shortDate(when)}${when > k ? " (late)" : " (early)"}`) : "done" };
+    if (isFuture) return { on: false, note: "coming up" };
+    if (isPast) return { on: false, note: "not done → still to do", late: true };
+    return { on: false, note: "to do today" };
+  };
+  const extra = info.doneHere.filter((i) => i.due !== k);
+  const Row = ({ i, on, note, late }) => (
+    <div style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "6px 0", borderBottom: "1px solid #161B26" }}>
+      <span style={{ fontSize: 12, color: on ? "#3DDC97" : late ? "#F2C14E" : "#556075", width: 14 }}>{on ? "✓" : "○"}</span>
+      <span style={{ ...S.body, fontSize: 13, color: on ? "#8A94A8" : "#E8ECF4", flex: 1, textDecorationLine: on ? "line-through" : "none" }}>{i.subj} {i.lesson}</span>
+      <span style={{ ...S.mono, fontSize: 9.5, color: late ? "#F2C14E" : "#556075", whiteSpace: "nowrap" }}>{note}</span>
+    </div>
+  );
+  return (
+    <div style={{ ...S.bigCard, borderColor: "#1E2530", marginTop: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.display, fontSize: 16, color: "#E8ECF4" }}>{shortDate(k)}{k === todayKey ? " · today" : ""}</span>
+        {info.cleared && <span style={{ ...S.mono, fontSize: 10, color: "#F2C14E" }}>🎮 PS5 unlocked</span>}
+      </div>
+      {!isFuture && (
+        <div style={{ ...S.mono, fontSize: 11, color: info.hoursOK ? "#3DDC97" : "#8A94A8", marginTop: 6 }}>
+          📚 Kaplan {formatShort(info.kaplanMs)} (📐 {formatShort(info.byCat.math)} · 📖 {formatShort(info.byCat.ela)}) {info.hoursOK ? "✓" : `· goal ${CAL_HOURS_GOAL}h`}
+        </div>
+      )}
+
+      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>PLANNED FOR THIS DAY</div>
+      {info.planned.length === 0
+        ? <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", padding: "6px 0" }}>Nothing new planned. Catch-up and post-its.</div>
+        : info.planned.map((i) => <Row key={i.id} i={i} {...statusFor(i)} />)}
+
+      {extra.length > 0 && (
+        <>
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>ALSO DONE THIS DAY</div>
+          {extra.map((i) => <Row key={i.id} i={i} on note={i.due < k ? `was due ${shortDate(i.due)}` : `ahead · due ${shortDate(i.due)}`} />)}
+        </>
+      )}
     </div>
   );
 }
@@ -912,6 +1088,21 @@ const TAGS = {
   focus:  { label: "🎯 weak spot · do the full lesson even if Perform goes OK", color: "#F2C14E" },
   strong: { label: "💪 you're good at this · Perform first, probably quick", color: "#6FE3B4" },
 };
+// What to search on YouTube for each lesson (only where the topic is known).
+const TOPICS = {
+  m3: "SHSAT picking numbers strategy", m4: "SHSAT backsolving", m5: "fractions and decimals 8th grade",
+  m6: "factors multiples LCM GCF number line", m7: "SHSAT percent problems", m8: "mean median mode range",
+  m9: "rate problems distance rate time", m10: "ratios and proportions SHSAT", m11: "coordinate plane 8th grade",
+  m12: "SHSAT probability", m13: "solving equations SHSAT algebra", m14: "solving equations SHSAT algebra",
+  m15: "solving equations SHSAT algebra", m16: "SHSAT algebra word problems", m17: "SHSAT arithmetic word problems",
+  m18: "SHSAT geometry", m19: "SHSAT geometry", m20: "SHSAT geometry", m21: "SHSAT geometry", m24: "surveys and sampling 8th grade math",
+  e1: "misplaced modifiers grammar", e2: "subject verb agreement grammar", e3: "SHSAT revising editing",
+  e4: "SHSAT reading comprehension strategy", e5: "SHSAT reading comprehension strategy", e6: "SHSAT reading comprehension strategy",
+  e7: "process of elimination reading comprehension", e8: "SHSAT fiction passage", e9: "how to answer poetry questions SHSAT",
+  e10: "SHSAT science passage reading",
+};
+const youtubeLink = (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+
 const MATH_ANSWERS_PAGE = 641;
 const ELA_ANSWERS_PAGE = 533;
 
@@ -926,7 +1117,7 @@ function countBehind(items, weekDone, todayKey) {
 }
 
 // One row of the plan.
-function PlanRow({ i, on, isNext, late, toggleWeek, showDue }) {
+function PlanRow({ i, on, isNext, late, toggleWeek, showDue, doneOn }) {
   return (
     <button onClick={() => toggleWeek(i.id)} aria-label={`${i.lesson}${on ? ", done" : ""}`}
       style={{ ...S.weekRow, borderColor: on ? "#2A4A3E" : isNext ? "#6FA8FF" : late ? "rgba(242,193,78,0.4)" : "#1E2530", background: on ? "rgba(61,220,151,0.06)" : isNext ? "rgba(46,111,242,0.08)" : "#0F131B" }}>
@@ -943,6 +1134,7 @@ function PlanRow({ i, on, isNext, late, toggleWeek, showDue }) {
       <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, alignSelf: "center" }}>
         {isNext && <span style={{ ...S.mono, fontSize: 9, color: "#6FA8FF" }}>NEXT</span>}
         {showDue && !on && <span style={{ ...S.mono, fontSize: 9, color: late ? "#F2C14E" : "#556075", whiteSpace: "nowrap" }}>{late ? "late · " : "by "}{shortDate(i.due)}</span>}
+        {on && typeof doneOn === "string" && <span style={{ ...S.mono, fontSize: 9, color: "#3A4356", whiteSpace: "nowrap" }}>done {shortDate(doneOn)}</span>}
       </span>
     </button>
   );
@@ -951,16 +1143,14 @@ function PlanRow({ i, on, isNext, late, toggleWeek, showDue }) {
 function HowToBox() {
   return (
     <div style={S.howBox}>
-      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#F2C14E" }}>HOW EVERY MATH LESSON WORKS</div>
+      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#F2C14E" }}>HOW EVERY LESSON WORKS</div>
       <ol style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.6 }}>
-        <li>Do the <b>Perform</b> questions at the end of the lesson first.</li>
-        <li>Check them in the back (Math answers start page {MATH_ANSWERS_PAGE}).</li>
-        <li>Most right → go to the next lesson.</li>
-        <li>Missed a lot → do the lesson from its first page, then redo the Perform questions.</li>
+        <li><b>Perform</b> set first. Check it in the back (Math p.{MATH_ANSWERS_PAGE}, ELA p.{ELA_ANSWERS_PAGE}).</li>
+        <li>4–5 right and you knew how → next lesson.</li>
+        <li>Fewer, or you guessed → do the lesson. Mark every question ✓ or ✗.</li>
+        <li>Every wrong one: figure out why (back of book, YouTube, ChatGPT/Gemini), redo it in your notebook, post-it on it.</li>
       </ol>
-      <div style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", marginTop: 8 }}>
-        ELA answers start page {ELA_ANSWERS_PAGE}. Every wrong answer goes on a post-it. Redo them all on Sunday.
-      </div>
+      <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 8 }}>Full steps → Post-its tab</div>
     </div>
   );
 }
@@ -993,7 +1183,7 @@ function ToDoTab({ weekDone, toggleWeek, todayKey }) {
         </div>
         {items.map((i) => (
           <PlanRow key={i.id} i={i} on={!!weekDone[i.id]} isNext={next && next.id === i.id}
-            late={i.due < todayKey && !weekDone[i.id]} toggleWeek={toggleWeek} showDue />
+            late={i.due < todayKey && !weekDone[i.id]} toggleWeek={toggleWeek} showDue doneOn={weekDone[i.id]} />
         ))}
       </div>
     );
@@ -1149,6 +1339,7 @@ const S = {
   totalInput: { width: 54, background: "#161B26", border: "1px solid #2A3242", borderRadius: 6, color: "#E8ECF4", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, padding: "3px 6px" },
   weekRow: { display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginBottom: 6, borderRadius: 10, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
   howBox: { marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)" },
+  ytLink: { display: "inline-block", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "#E06C6C", textDecoration: "none", margin: "0 2px 6px", padding: "4px 8px", border: "1px solid rgba(224,108,108,0.35)", borderRadius: 6 },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
