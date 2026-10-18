@@ -808,14 +808,17 @@ function PostItsTab() {
         Same steps every time. ELA lessons that say "do the full lesson" start at step 3.
       </p>
 
-      <Step n="1" title="Perform set first">
-        Don't read the lesson yet. Do the <b>Perform</b> questions at the end of it, then check them in the back.
-        <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 6 }}>Math answers p.{MATH_ANSWERS_PAGE} · ELA answers p.{ELA_ANSWERS_PAGE}</div>
+      <Step n="1" title="Look at the topics" tip="🎯 lessons in your plan are weak spots: always go straight to the lesson. 💪 lessons: try the Perform set first.">
+        Flip through the lesson's headings before doing anything.
+        <div style={{ marginTop: 4 }}>😎 Looks <b>easy</b> → step 2.</div>
+        <div>😬 Looks <b>hard</b> → skip to step 3.</div>
       </Step>
 
-      <Step n="2" title="Decide" tip="Guessing and getting lucky doesn't count. If you weren't sure how to do it, do the lesson.">
-        <div>✅ Got <b>4–5 right</b> and you actually knew how → <b>next lesson</b>.</div>
-        <div style={{ marginTop: 4 }}>📖 Got fewer, or guessed on some → <b>do the lesson</b> (step 3).</div>
+      <Step n="2" title="Easy? Try the Perform set" tip="Guessing and getting lucky doesn't count. If you weren't sure how to do it, do the lesson.">
+        Do the <b>Perform</b> questions at the end of the lesson (about 2 pages) and check them in the back.
+        <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", margin: "6px 0" }}>Math answers p.{MATH_ANSWERS_PAGE} · ELA answers p.{ELA_ANSWERS_PAGE}</div>
+        <div>✅ Mostly right and you actually knew how → <b>next lesson</b>. Still post-it any you missed.</div>
+        <div style={{ marginTop: 4 }}>📖 Missed a bunch, or guessed → <b>do the lesson</b> (step 3).</div>
       </Step>
 
       <Step n="3" title="Do the lesson">
@@ -826,8 +829,8 @@ function PostItsTab() {
         Read the explanation in the back. Still don't get it? Watch a <b>YouTube</b> video on the topic, or ask <b>ChatGPT or Gemini</b>. Don't move on until you could explain it to someone else.
       </Step>
 
-      <Step n="5" title="Redo the Perform set">
-        Same as the lesson: mark right/wrong, figure out every wrong one.
+      <Step n="5" title="Do the Perform set">
+        Now do (or redo) the Perform set. Same as the lesson: mark right/wrong, figure out every wrong one.
       </Step>
 
       <Step n="6" title="Notebook, then post-it">
@@ -1028,65 +1031,68 @@ function DayDetail({ k, info, todayKey, weekDone }) {
 // One list per subject, in order, each item with the day it should be done by.
 // He works down the list; the first unchecked item is NEXT. Anything past its
 // date and not checked counts as "behind". Sundays 10/25 and 11/1 have nothing
-// due - they're for catching up and the post-it redo.
+// due - they're for catching up. Test assumed Sun Nov 8, so Sat Nov 7 is light.
 //
-// Nothing is cut: he has 3-3.5 hrs a day. Things he's already good at go fast
-// because of the Perform-first rule. Tags come from his Khan's diagnostics
-// (F Jul 4, G Aug 30, H Sep 26):
-//   focus  = wrong on most diagnostics -> do the full lesson even if Perform goes OK
-//   strong = right on most diagnostics -> Perform first, probably quick
+// Nothing is cut except 15.1-15.2 (never on his diagnostics). Pages are from the
+// table of contents; each Perform set is at the end of its lesson, just before
+// the next lesson starts. Tags come from his Khan's diagnostics (F, G, H):
+//   focus  = wrong on most diagnostics -> go straight to the lesson
+//   strong = right on most diagnostics -> try the Perform set first
 //
-// The ids m1-m7 and e1-e5 are the same as the first week's plan, so what he
-// already checked off (10.1, 10.2, 10.3) stays crossed off.
+// Ids m1-m25 / e1-e14 match the earlier versions of the plan, so anything he
+// already checked off stays checked.
+const TEST_DATE = "2026-11-08";
 const KAPLAN_PLAN = {
   id: "2026-10-12", // storage key - keep the same so old checks carry over
   math: [
     { id: "m1",  due: "2026-10-13", lesson: "Lesson 10.1", page: "page 300", text: "Redo only the questions you got wrong before." },
-    { id: "m2",  due: "2026-10-14", lesson: "Lesson 10.2", page: "page 306", text: "Perform questions just before page 315." },
-    { id: "m3",  due: "2026-10-15", lesson: "Lesson 10.3", page: "page 315", text: "Perform questions just before page 320." },
+    { id: "m2",  due: "2026-10-14", lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform questions just before page 315." },
+    { id: "m3",  due: "2026-10-15", lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform questions just before page 320." },
     { id: "m4",  due: "2026-10-18", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform questions just before page 325.", tag: "focus" },
     { id: "m5",  due: "2026-10-19", lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform questions just before page 334.", tag: "focus" },
-    { id: "m6",  due: "2026-10-19", lesson: "Lesson 11.2", page: "page 334", text: "Number lines, factors, multiples. Perform questions just before page 343.", tag: "focus" },
+    { id: "m6",  due: "2026-10-19", lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform questions just before page 343.", tag: "focus" },
     { id: "m7",  due: "2026-10-20", lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform questions just before page 350.", tag: "strong" },
-    { id: "m8",  due: "2026-10-20", lesson: "Lesson 11.4", text: "Statistics terms. Perform questions first." },
-    { id: "m9",  due: "2026-10-21", lesson: "Lesson 11.5", text: "Rates. Perform questions first.", tag: "focus" },
-    { id: "m10", due: "2026-10-22", lesson: "Lesson 11.6", text: "Ratios. Perform questions first." },
-    { id: "m11", due: "2026-10-22", lesson: "Lesson 11.7", text: "Coordinate plane. Perform questions first." },
-    { id: "m12", due: "2026-10-23", lesson: "Lesson 11.8", text: "Probability. Perform questions first." },
-    { id: "m13", due: "2026-10-24", lesson: "Lesson 12.1", text: "Algebra. Perform questions first.", tag: "focus" },
-    { id: "m14", due: "2026-10-26", lesson: "Lesson 12.2", text: "Algebra. Perform questions first.", tag: "focus" },
-    { id: "m15", due: "2026-10-27", lesson: "Lesson 12.3", text: "Algebra. Perform questions first.", tag: "focus" },
-    { id: "m16", due: "2026-10-28", lesson: "Lesson 14.3", text: "Word Problems: Algebra. Perform questions first.", tag: "focus" },
-    { id: "m17", due: "2026-10-29", lesson: "Lesson 14.1", text: "Word Problems: Arithmetic. Perform questions first.", tag: "focus" },
-    { id: "m18", due: "2026-10-30", lesson: "Lesson 13.1", text: "Geometry. Perform questions first." },
-    { id: "m19", due: "2026-10-30", lesson: "Lesson 13.2", text: "Geometry. Perform questions first." },
-    { id: "m20", due: "2026-10-31", lesson: "Lesson 13.3", text: "Geometry. Perform questions first." },
-    { id: "m21", due: "2026-10-31", lesson: "Lesson 13.4", text: "Geometry. Perform questions first." },
-    { id: "m22", due: "2026-11-02", lesson: "Lesson 14.4", text: "Perform questions first." },
-    { id: "m23", due: "2026-11-02", lesson: "Lesson 14.2", text: "Perform questions first." },
-    { id: "m24", due: "2026-11-03", lesson: "Lesson 15.3", text: "Surveys. Perform questions first." },
-    { id: "m25", due: "2026-11-03", lesson: "Chapter 16", text: "Mixed Perform Sets. Do as many as you can." },
+    { id: "m8",  due: "2026-10-21", lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform questions just before page 356." },
+    { id: "m9",  due: "2026-10-21", lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform questions just before page 360.", tag: "focus" },
+    { id: "m10", due: "2026-10-22", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform questions just before page 367." },
+    { id: "m11", due: "2026-10-23", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform questions just before page 374." },
+    { id: "m12", due: "2026-10-23", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform questions just before page 381." },
+    { id: "m13", due: "2026-10-24", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform questions just before page 388.", tag: "focus" },
+    { id: "m14", due: "2026-10-26", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform questions just before page 396.", tag: "focus" },
+    { id: "m15", due: "2026-10-27", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform questions just before page 403.", tag: "focus" },
+    { id: "m16", due: "2026-10-28", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform questions just before page 464.", tag: "focus" },
+    { id: "m17", due: "2026-10-29", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform questions just before page 450.", tag: "focus" },
+    { id: "m18", due: "2026-10-30", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform questions just before page 416." },
+    { id: "m19", due: "2026-10-31", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform questions just before page 426." },
+    { id: "m20", due: "2026-11-02", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform questions just before page 436." },
+    { id: "m21", due: "2026-11-02", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform questions just before page 441." },
+    { id: "m22", due: "2026-11-03", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform questions just before page 471." },
+    { id: "m23", due: "2026-11-04", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform questions just before page 456." },
+    { id: "m24", due: "2026-11-04", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform questions just before page 491." },
+    { id: "m25", due: "2026-11-05", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Do as many as you can, check each set before starting the next." },
+    { id: "m26", due: "2026-11-06", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
   ],
   ela: [
     { id: "e1",  due: "2026-10-18", lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before.", tag: "focus" },
     { id: "e2",  due: "2026-10-18", lesson: "Lesson 4.3", page: "pages 78–94", text: "Redo only your wrong ones.", tag: "focus" },
     { id: "e3",  due: "2026-10-19", lesson: "Lesson 4.6", page: "page 119", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
-    { id: "e4",  due: "2026-10-20", lesson: "Lesson 5.1", page: "page 138", text: "Do the full lesson." },
-    { id: "e5",  due: "2026-10-21", lesson: "Lesson 5.2", page: "page 154", text: "Do the full lesson." },
-    { id: "e6",  due: "2026-10-22", lesson: "Lesson 6.1", text: "Do the full lesson." },
-    { id: "e7",  due: "2026-10-23", lesson: "Lesson 6.2", text: "Elimination. Do the full lesson." },
-    { id: "e8",  due: "2026-10-26", lesson: "Lesson 7.1", text: "Fiction. Do the full lesson." },
-    { id: "e9",  due: "2026-10-27", lesson: "Lesson 7.2", text: "Poetry. Do the full lesson." },
-    { id: "e10", due: "2026-10-28", lesson: "Lesson 7.3", text: "Science. Do the full lesson." },
-    { id: "e11", due: "2026-10-29", lesson: "Chapter 8", text: "ELA review. Do the full chapter." },
-    { id: "e12", due: "2026-10-30", lesson: "Chapter 17", text: "Do the full chapter." },
-    { id: "e13", due: "2026-11-02", lesson: "Chapter 18", text: "Strategic Review." },
-    { id: "e14", due: "2026-11-03", lesson: "ELA post-its", text: "Redo every ELA post-it in the book." },
+    { id: "e4",  due: "2026-10-20", lesson: "Lesson 5.1", page: "page 138", text: "Roadmapping. Do the full lesson." },
+    { id: "e5",  due: "2026-10-21", lesson: "Lesson 5.2", page: "page 154", text: "The Kaplan Method. Do the full lesson." },
+    { id: "e6",  due: "2026-10-22", lesson: "Lesson 6.1", page: "page 172", text: "Question types. Do the full lesson." },
+    { id: "e7",  due: "2026-10-23", lesson: "Lesson 6.2", page: "page 189", text: "Elimination strategies. Do the full lesson." },
+    { id: "e8",  due: "2026-10-26", lesson: "Lesson 7.1", page: "page 206", text: "Fiction. Do the full lesson." },
+    { id: "e9",  due: "2026-10-27", lesson: "Lesson 7.2", page: "page 228", text: "Poetry. Do the full lesson." },
+    { id: "e10", due: "2026-10-28", lesson: "Lesson 7.3", page: "page 243", text: "Science. Do the full lesson." },
+    { id: "e11", due: "2026-10-29", lesson: "Lesson 8.1", page: "page 258", text: "Question types review. Do the full lesson." },
+    { id: "e15", due: "2026-10-30", lesson: "Lesson 8.2", page: "page 270", text: "Strategic reading & elimination review. Do the full lesson." },
+    { id: "e13", due: "2026-11-02", lesson: "Lesson 18.1", page: "page 518", text: "ELA Strategic Review. Answers start page 751." },
+    { id: "e14", due: "2026-11-03", lesson: "ELA post-its", text: "Redo every ELA post-it still in the book." },
+    { id: "e12", due: "2026-11-07", lesson: "Chapter 17", page: "page 507", text: "Preparing for test day. Short — read it the day before the test." },
   ],
 };
 const TAGS = {
-  focus:  { label: "🎯 weak spot · do the full lesson even if Perform goes OK", color: "#F2C14E" },
-  strong: { label: "💪 you're good at this · Perform first, probably quick", color: "#6FE3B4" },
+  focus:  { label: "🎯 weak spot · go straight to the lesson", color: "#F2C14E" },
+  strong: { label: "💪 you're good at this · try the Perform set first", color: "#6FE3B4" },
 };
 // What to search on YouTube for each lesson (only where the topic is known).
 const TOPICS = {
@@ -1095,9 +1101,11 @@ const TOPICS = {
   m9: "rate problems distance rate time", m10: "ratios and proportions SHSAT", m11: "coordinate plane 8th grade",
   m12: "SHSAT probability", m13: "solving equations SHSAT algebra", m14: "solving equations SHSAT algebra",
   m15: "solving equations SHSAT algebra", m16: "SHSAT algebra word problems", m17: "SHSAT arithmetic word problems",
-  m18: "SHSAT geometry", m19: "SHSAT geometry", m20: "SHSAT geometry", m21: "SHSAT geometry", m24: "surveys and sampling 8th grade math",
+  m18: "lines and angles geometry 8th grade", m19: "perimeter and area SHSAT", m20: "SHSAT geometry shapes", m21: "volume surface area 3D shapes",
+  m22: "SHSAT geometry word problems", m23: "SHSAT statistics probability word problems", m24: "two way tables surveys 8th grade math",
+  m2: "order of operations number properties", e11: "SHSAT reading question types", e15: "SHSAT reading comprehension elimination",
   e1: "misplaced modifiers grammar", e2: "subject verb agreement grammar", e3: "SHSAT revising editing",
-  e4: "SHSAT reading comprehension strategy", e5: "SHSAT reading comprehension strategy", e6: "SHSAT reading comprehension strategy",
+  e4: "SHSAT reading comprehension roadmapping", e5: "SHSAT reading comprehension strategy", e6: "SHSAT reading question types",
   e7: "process of elimination reading comprehension", e8: "SHSAT fiction passage", e9: "how to answer poetry questions SHSAT",
   e10: "SHSAT science passage reading",
 };
@@ -1110,6 +1118,11 @@ const ELA_ANSWERS_PAGE = 533;
 function shortDate(key) {
   const [y, m, d] = key.split("-").map(Number);
   return `${DAY_NAMES[new Date(y, m - 1, d).getDay()].slice(0, 3)} ${m}/${d}`;
+}
+// whole days from one "YYYY-MM-DD" to another
+function daysUntil(fromKey, toKey) {
+  const toDate = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+  return Math.max(0, Math.round((toDate(toKey) - toDate(fromKey)) / 86400000));
 }
 // how many items are past their date and not done
 function countBehind(items, weekDone, todayKey) {
@@ -1145,10 +1158,10 @@ function HowToBox() {
     <div style={S.howBox}>
       <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#F2C14E" }}>HOW EVERY LESSON WORKS</div>
       <ol style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.6 }}>
-        <li><b>Perform</b> set first. Check it in the back (Math p.{MATH_ANSWERS_PAGE}, ELA p.{ELA_ANSWERS_PAGE}).</li>
-        <li>4–5 right and you knew how → next lesson.</li>
-        <li>Fewer, or you guessed → do the lesson. Mark every question ✓ or ✗.</li>
+        <li>Look at the lesson's topics. Looks easy → try the <b>Perform</b> set (last ~2 pages). Mostly right → next lesson.</li>
+        <li>Looks hard, or the Perform set went badly → do the lesson. Mark every question ✓ or ✗.</li>
         <li>Every wrong one: figure out why (back of book, YouTube, ChatGPT/Gemini), redo it in your notebook, post-it on it.</li>
+        <li>Answers: Math p.{MATH_ANSWERS_PAGE}, ELA p.{ELA_ANSWERS_PAGE}.</li>
       </ol>
       <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 8 }}>Full steps → Post-its tab</div>
     </div>
@@ -1190,7 +1203,7 @@ function ToDoTab({ weekDone, toggleWeek, todayKey }) {
   };
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text="KAPLAN PLAN · UNTIL TEST DAY" />
+      <SectionLabel text={`KAPLAN PLAN · TEST ${shortDate(TEST_DATE).toUpperCase()} (ASSUMED) · ${daysUntil(todayKey, TEST_DATE)} DAYS LEFT`} />
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 0" }}>
         About 2 hrs Math + 1 hr ELA a day. Go in order, starting at the one marked <span style={{ color: "#6FA8FF" }}>NEXT</span>. Sundays are for catching up. {doneCount}/{all.length} done.
       </p>
