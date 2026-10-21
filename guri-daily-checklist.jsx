@@ -285,10 +285,10 @@ export default function GuriQuestLog() {
   // so checks carry over from one day to the next.
   // Saves the DATE it was checked (not just true), so the calendar can show
   // what got done on which day. Older checks saved as plain true still count as done.
-  async function toggleWeek(id) {
+  async function toggleWeek(id, mode) {
     const next = { ...weekDone };
     if (next[id]) delete next[id];
-    else next[id] = dateKey;
+    else next[id] = mode === "know" ? `know:${dateKey}` : dateKey;
     setWeekDone(next);
     try { await window.storage.set(`guri-kaplanweek:${KAPLAN_PLAN.id}`, JSON.stringify(next)); } catch (e) {}
   }
@@ -355,7 +355,7 @@ export default function GuriQuestLog() {
       {tab === "today" && (
         <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
-      {tab === "todo" && <ToDoTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} />}
+      {tab === "todo" && <TestListTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} />}
       {tab === "schedule" && <ScheduleTab />}
       {tab === "guide" && <PostItsTab />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
@@ -371,7 +371,7 @@ export default function GuriQuestLog() {
 function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
-    { id: "todo", label: "To Do" },
+    { id: "todo", label: "Test List" },
     { id: "schedule", label: "Schedule" },
     { id: "guide", label: "Post-its" },
     { id: "calendar", label: "Calendar" },
@@ -558,19 +558,19 @@ function KaplanCard(props) {
 
 // Inside the Kaplan box: what he checked off today (still crossed off, tap to
 // undo - so a mis-tap never makes something vanish) and what's NEXT in each
-// subject. The full plan with dates lives on the To Do tab.
+// subject. The whole list lives on the Test List tab.
 function KaplanWeekInBox({ weekDone, toggleWeek, todayKey }) {
   const [showHow, setShowHow] = useState(false);
   const section = (label, items) => {
-    const doneToday = items.filter((i) => weekDone[i.id] === todayKey);
+    const doneToday = items.filter((i) => doneDay(weekDone[i.id]) === todayKey);
     const next = items.find((i) => !weekDone[i.id]);
     return (
       <div key={label} style={{ marginTop: 8 }}>
         <div style={{ ...S.mono, fontSize: 10, color: "#7A8598", margin: "0 2px 4px" }}>{label}</div>
-        {doneToday.map((i) => <PlanRow key={i.id} i={i} on toggleWeek={toggleWeek} />)}
+        {doneToday.map((i) => <PlanRow key={i.id} i={i} on toggleWeek={toggleWeek} value={weekDone[i.id]} />)}
         {next ? (
           <>
-            <PlanRow i={next} on={false} isNext late={next.due < todayKey} toggleWeek={toggleWeek} showDue />
+            <PlanRow i={next} on={false} isNext toggleWeek={toggleWeek} />
             {TOPICS[next.id] && (
               <a href={youtubeLink(TOPICS[next.id])} target="_blank" rel="noopener noreferrer" style={S.ytLink}>
                 ▶ YouTube: {TOPICS[next.id]}
@@ -592,8 +592,8 @@ function KaplanWeekInBox({ weekDone, toggleWeek, todayKey }) {
       {showHow && <HowToBox />}
       {section("📐 Math", KAPLAN_PLAN.math)}
       {section("📖 ELA", KAPLAN_PLAN.ela)}
-      <PaceLine weekDone={weekDone} todayKey={todayKey} />
-      <div style={{ ...S.mono, fontSize: 10, color: "#556075", margin: "6px 2px 0" }}>full plan with dates → To Do tab</div>
+      <RemainingLine weekDone={weekDone} todayKey={todayKey} />
+      <div style={{ ...S.mono, fontSize: 10, color: "#556075", margin: "6px 2px 0" }}>everything for the test → Test List tab</div>
     </div>
   );
 }
@@ -855,17 +855,18 @@ function PostItsTab() {
 }
 
 // ---- CALENDAR tab -----------------------------------------------------
-// Each day shows Kaplan time and how many plan items got checked off that day
-// out of how many were planned. Tap a day to see its list.
-//   green  = 3h+ of Kaplan AND everything planned for that day got done
+// Each day shows Kaplan time and how many items got checked off that day.
+// Tap a day to see what got done.
+//   green  = 3h+ of Kaplan AND 2+ items done
 //   orange = one of the two
 //   red    = neither
-// Days with nothing planned (catch-up Sundays) are judged on time only.
+// ("I know it" skips don't count as done - only real work does.)
 const CAL_HOURS_GOAL = 3;
+const CAL_ITEMS_GOAL = 2;
 const ALL_PLAN = () => [...KAPLAN_PLAN.math.map((i) => ({ ...i, subj: "📐" })), ...KAPLAN_PLAN.ela.map((i) => ({ ...i, subj: "📖" }))];
 const PLAN_START = "2026-10-12";
 // Check-off dates only started being saved Oct 17, so days before that show
-// Kaplan time but aren't colored or judged on lessons.
+// Kaplan time but aren't colored.
 const DATES_SAVED_FROM = "2026-10-17";
 
 // 11400000 -> "3h10", 2700000 -> "45m"
@@ -915,16 +916,16 @@ function CalendarTab({ completedDates, todayKey, weekDone, todayTimes }) {
     const log = (t && t.study) || [];
     const r = readStudy(log, k === todayKey ? Date.now() : lastAt(log));
     const kaplanMs = r.byCat.math + r.byCat.ela;
-    const planned = plan.filter((i) => i.due === k);
     const doneHere = plan.filter((i) => weekDone[i.id] === k);
+    const knownHere = plan.filter((i) => weekDone[i.id] === `know:${k}`);
     const hoursOK = kaplanMs >= CAL_HOURS_GOAL * 3600000;
-    const lessonsOK = planned.length === 0 ? true : doneHere.length >= planned.length;
+    const lessonsOK = doneHere.length >= CAL_ITEMS_GOAL;
     const tracked = k >= PLAN_START && k <= todayKey;
     const judged = k >= DATES_SAVED_FROM;
     let color = null;
     if (tracked && judged && k < todayKey) color = hoursOK && lessonsOK ? "ok" : hoursOK || lessonsOK ? "mid" : "bad";
     if (k === todayKey && hoursOK && lessonsOK) color = "ok";
-    return { kaplanMs, byCat: r.byCat, planned, doneHere, hoursOK, lessonsOK, tracked, judged, color, cleared: completedSet.has(k) };
+    return { kaplanMs, byCat: r.byCat, doneHere, knownHere, hoursOK, lessonsOK, tracked, judged, color, cleared: completedSet.has(k) };
   }
   const COLORS = {
     ok:  { bg: "rgba(61,220,151,0.14)",  text: "#3DDC97" },
@@ -951,7 +952,7 @@ function CalendarTab({ completedDates, todayKey, weekDone, todayTimes }) {
           const c = info.color ? COLORS[info.color] : null;
           const isToday = k === todayKey;
           const isPicked = k === picked;
-          const showNums = info.tracked && (info.kaplanMs > 0 || info.planned.length > 0 || info.doneHere.length > 0);
+          const showNums = info.tracked && (info.kaplanMs > 0 || info.doneHere.length > 0);
           return (
             <button key={i} onClick={() => setPicked(k)} aria-label={`${shortDate(k)}`}
               style={{ ...S.calCell, cursor: "pointer", padding: 0, fontFamily: "inherit",
@@ -962,7 +963,7 @@ function CalendarTab({ completedDates, todayKey, weekDone, todayTimes }) {
                 <>
                   <span style={{ ...S.mono, fontSize: 8.5, color: "#C9D2E0", lineHeight: 1.2 }}>{formatCell(info.kaplanMs)}</span>
                   <span style={{ ...S.mono, fontSize: 8.5, color: "#8A94A8", lineHeight: 1.2 }}>
-                    {!info.judged ? "" : info.planned.length ? `${info.doneHere.length}/${info.planned.length}` : info.doneHere.length ? `+${info.doneHere.length}` : ""}
+                    {info.judged ? `${info.doneHere.length}✓` : ""}
                   </span>
                 </>
               )}
@@ -972,32 +973,23 @@ function CalendarTab({ completedDates, todayKey, weekDone, todayTimes }) {
       </div>
 
       <p style={{ ...S.body, fontSize: 11, color: "#556075", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
-        Each day: Kaplan time · lessons done / planned.<br />
-        <span style={{ color: "#3DDC97" }}>Green</span> = {CAL_HOURS_GOAL}h+ and planned lessons done · <span style={{ color: "#F2C14E" }}>orange</span> = one · <span style={{ color: "#E06C6C" }}>red</span> = neither
+        Each day: Kaplan time · items done.<br />
+        <span style={{ color: "#3DDC97" }}>Green</span> = {CAL_HOURS_GOAL}h+ and {CAL_ITEMS_GOAL}+ items · <span style={{ color: "#F2C14E" }}>orange</span> = one · <span style={{ color: "#E06C6C" }}>red</span> = neither
       </p>
 
-      {pickedInfo && <DayDetail k={picked} info={pickedInfo} todayKey={todayKey} weekDone={weekDone} />}
+      {pickedInfo && <DayDetail k={picked} info={pickedInfo} todayKey={todayKey} />}
     </div>
   );
 }
 
-// The list that shows up under the calendar for the day you tap.
-function DayDetail({ k, info, todayKey, weekDone }) {
-  const isPast = k < todayKey;
+// What got done on the day you tap.
+function DayDetail({ k, info, todayKey }) {
   const isFuture = k > todayKey;
-  const statusFor = (i) => {
-    const when = weekDone[i.id];
-    if (when) return { on: true, note: typeof when === "string" ? (when === k ? "done" : `done ${shortDate(when)}${when > k ? " (late)" : " (early)"}`) : "done" };
-    if (isFuture) return { on: false, note: "coming up" };
-    if (isPast) return { on: false, note: "not done → still to do", late: true };
-    return { on: false, note: "to do today" };
-  };
-  const extra = info.doneHere.filter((i) => i.due !== k);
-  const Row = ({ i, on, note, late }) => (
+  const Row = ({ i, note, color }) => (
     <div style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "6px 0", borderBottom: "1px solid #161B26" }}>
-      <span style={{ fontSize: 12, color: on ? "#3DDC97" : late ? "#F2C14E" : "#556075", width: 14 }}>{on ? "✓" : "○"}</span>
-      <span style={{ ...S.body, fontSize: 13, color: on ? "#8A94A8" : "#E8ECF4", flex: 1, textDecorationLine: on ? "line-through" : "none" }}>{i.subj} {i.lesson}</span>
-      <span style={{ ...S.mono, fontSize: 9.5, color: late ? "#F2C14E" : "#556075", whiteSpace: "nowrap" }}>{note}</span>
+      <span style={{ fontSize: 12, color, width: 14 }}>✓</span>
+      <span style={{ ...S.body, fontSize: 13, color: "#C9D2E0", flex: 1 }}>{i.subj} {i.lesson}</span>
+      {note && <span style={{ ...S.mono, fontSize: 9.5, color: "#556075", whiteSpace: "nowrap" }}>{note}</span>}
     </div>
   );
   return (
@@ -1006,90 +998,98 @@ function DayDetail({ k, info, todayKey, weekDone }) {
         <span style={{ ...S.display, fontSize: 16, color: "#E8ECF4" }}>{shortDate(k)}{k === todayKey ? " · today" : ""}</span>
         {info.cleared && <span style={{ ...S.mono, fontSize: 10, color: "#F2C14E" }}>🎮 PS5 unlocked</span>}
       </div>
-      {!isFuture && (
-        <div style={{ ...S.mono, fontSize: 11, color: info.hoursOK ? "#3DDC97" : "#8A94A8", marginTop: 6 }}>
-          📚 Kaplan {formatShort(info.kaplanMs)} (📐 {formatShort(info.byCat.math)} · 📖 {formatShort(info.byCat.ela)}) {info.hoursOK ? "✓" : `· goal ${CAL_HOURS_GOAL}h`}
-        </div>
-      )}
-
-      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>PLANNED FOR THIS DAY</div>
-      {info.planned.length === 0
-        ? <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", padding: "6px 0" }}>Nothing new planned. Catch-up and post-its.</div>
-        : info.planned.map((i) => <Row key={i.id} i={i} {...statusFor(i)} />)}
-
-      {extra.length > 0 && (
+      {isFuture ? (
+        <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 8 }}>Hasn't happened yet.</div>
+      ) : (
         <>
-          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>ALSO DONE THIS DAY</div>
-          {extra.map((i) => <Row key={i.id} i={i} on note={i.due < k ? `was due ${shortDate(i.due)}` : `ahead · due ${shortDate(i.due)}`} />)}
+          <div style={{ ...S.mono, fontSize: 11, color: info.hoursOK ? "#3DDC97" : "#8A94A8", marginTop: 6 }}>
+            📚 Kaplan {formatShort(info.kaplanMs)} (📐 {formatShort(info.byCat.math)} · 📖 {formatShort(info.byCat.ela)}) {info.hoursOK ? "✓" : `· goal ${CAL_HOURS_GOAL}h`}
+          </div>
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>DONE THIS DAY ({info.doneHere.length})</div>
+          {info.doneHere.length === 0
+            ? <div style={{ ...S.body, fontSize: 12.5, color: info.judged ? "#E06C6C" : "#8A94A8", padding: "6px 0" }}>{info.judged ? "Nothing checked off." : "Check-off dates weren't saved before Oct 17."}</div>
+            : info.doneHere.map((i) => <Row key={i.id} i={i} color="#3DDC97" />)}
+          {info.knownHere.length > 0 && (
+            <>
+              <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 0 2px" }}>MARKED "I KNOW IT" ({info.knownHere.length})</div>
+              {info.knownHere.map((i) => <Row key={i.id} i={i} color="#6FA8FF" note="skipped" />)}
+            </>
+          )}
         </>
       )}
     </div>
   );
 }
 
-// ---- the Kaplan plan (updated Oct 17) -----------------------------------
-// One list per subject, in order, each item with the day it should be done by.
-// He works down the list; the first unchecked item is NEXT. Anything past its
-// date and not checked counts as "behind". Sundays 10/25 and 11/1 have nothing
-// due - they're for catching up. Test assumed Sun Nov 8, so Sat Nov 7 is light.
+// ---- the Test List (updated Oct 21) --------------------------------------
+// Everything left for the test, one list per subject. No dates - he works top
+// to bottom, and the first unchecked item is NEXT. Math is in priority order:
+// weak spots first, so if time runs out, what's left is the least important.
+// ELA stays in book order because the reading lessons build on each other.
 //
-// Nothing is cut except 15.1-15.2 (never on his diagnostics). Pages are from the
-// table of contents; each Perform set is at the end of its lesson, just before
-// the next lesson starts. Tags come from his Khan's diagnostics (F, G, H):
-//   focus  = wrong on most diagnostics -> go straight to the lesson
-//   strong = right on most diagnostics -> try the Perform set first
+// Nothing is skipped unless he already knows it - the "I know it" button is for
+// that (meant to be decided with his tutor). Pages from the table of contents;
+// each Perform set is the last ~2 pages of its lesson.
 //
-// Ids m1-m25 / e1-e14 match the earlier versions of the plan, so anything he
-// already checked off stays checked.
+// Saved values (in weekDone): "2026-10-21" = done that day, "know:2026-10-21" =
+// marked "I know it" that day, true = done before dates were saved.
+// Ids match earlier versions of the plan so old checks carry over.
 const TEST_DATE = "2026-11-08";
 const KAPLAN_PLAN = {
   id: "2026-10-12", // storage key - keep the same so old checks carry over
   math: [
-    { id: "m1",  due: "2026-10-13", lesson: "Lesson 10.1", page: "page 300", text: "Redo only the questions you got wrong before." },
-    { id: "m2",  due: "2026-10-14", lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform questions just before page 315." },
-    { id: "m3",  due: "2026-10-15", lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform questions just before page 320." },
-    { id: "m4",  due: "2026-10-18", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform questions just before page 325.", tag: "focus" },
-    { id: "m5",  due: "2026-10-19", lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform questions just before page 334.", tag: "focus" },
-    { id: "m6",  due: "2026-10-19", lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform questions just before page 343.", tag: "focus" },
-    { id: "m7",  due: "2026-10-20", lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform questions just before page 350.", tag: "strong" },
-    { id: "m8",  due: "2026-10-21", lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform questions just before page 356." },
-    { id: "m9",  due: "2026-10-21", lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform questions just before page 360.", tag: "focus" },
-    { id: "m10", due: "2026-10-22", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform questions just before page 367." },
-    { id: "m11", due: "2026-10-23", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform questions just before page 374." },
-    { id: "m12", due: "2026-10-23", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform questions just before page 381." },
-    { id: "m13", due: "2026-10-24", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform questions just before page 388.", tag: "focus" },
-    { id: "m14", due: "2026-10-26", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform questions just before page 396.", tag: "focus" },
-    { id: "m15", due: "2026-10-27", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform questions just before page 403.", tag: "focus" },
-    { id: "m16", due: "2026-10-28", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform questions just before page 464.", tag: "focus" },
-    { id: "m17", due: "2026-10-29", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform questions just before page 450.", tag: "focus" },
-    { id: "m18", due: "2026-10-30", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform questions just before page 416." },
-    { id: "m19", due: "2026-10-31", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform questions just before page 426." },
-    { id: "m20", due: "2026-11-02", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform questions just before page 436." },
-    { id: "m21", due: "2026-11-02", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform questions just before page 441." },
-    { id: "m22", due: "2026-11-03", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform questions just before page 471." },
-    { id: "m23", due: "2026-11-04", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform questions just before page 456." },
-    { id: "m24", due: "2026-11-04", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform questions just before page 491." },
-    { id: "m25", due: "2026-11-05", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Do as many as you can, check each set before starting the next." },
-    { id: "m26", due: "2026-11-06", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
+    // already done
+    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", text: "Basic terms & translation." },
+    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform just before page 315." },
+    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform just before page 320." },
+    // weak spots first
+    { id: "m4",  group: "weak", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
+    { id: "m5",  group: "weak", lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform just before page 334.", tag: "focus" },
+    { id: "m6",  group: "weak", lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform just before page 343.", tag: "focus" },
+    { id: "m9",  group: "weak", lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform just before page 360.", tag: "focus" },
+    { id: "m13", group: "weak", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform just before page 388.", tag: "focus" },
+    { id: "m14", group: "weak", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform just before page 396.", tag: "focus" },
+    { id: "m15", group: "weak", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform just before page 403.", tag: "focus" },
+    { id: "m16", group: "weak", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform just before page 464.", tag: "focus" },
+    { id: "m17", group: "weak", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform just before page 450.", tag: "focus" },
+    // everything else
+    { id: "m7",  group: "rest", lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform just before page 350.", tag: "strong" },
+    { id: "m8",  group: "rest", lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform just before page 356." },
+    { id: "m10", group: "rest", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform just before page 367." },
+    { id: "m11", group: "rest", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform just before page 374." },
+    { id: "m12", group: "rest", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform just before page 381." },
+    { id: "m18", group: "rest", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform just before page 416." },
+    { id: "m19", group: "rest", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform just before page 426." },
+    { id: "m20", group: "rest", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform just before page 436." },
+    { id: "m21", group: "rest", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform just before page 441." },
+    { id: "m23", group: "rest", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform just before page 456." },
+    { id: "m22", group: "rest", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform just before page 471." },
+    { id: "m27", group: "rest", lesson: "Lesson 15.1", page: "page 472", text: "Charts. Perform just before page 479." },
+    { id: "m28", group: "rest", lesson: "Lesson 15.2", page: "page 479", text: "Data tables. Perform just before page 487." },
+    { id: "m24", group: "rest", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform just before page 491." },
+    { id: "m25", group: "rest", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Check each set before starting the next." },
+    { id: "m26", group: "rest", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
   ],
   ela: [
-    { id: "e1",  due: "2026-10-18", lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before.", tag: "focus" },
-    { id: "e2",  due: "2026-10-18", lesson: "Lesson 4.3", page: "pages 78–94", text: "Redo only your wrong ones.", tag: "focus" },
-    { id: "e3",  due: "2026-10-19", lesson: "Lesson 4.6", page: "page 119", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
-    { id: "e4",  due: "2026-10-20", lesson: "Lesson 5.1", page: "page 138", text: "Roadmapping. Do the full lesson." },
-    { id: "e5",  due: "2026-10-21", lesson: "Lesson 5.2", page: "page 154", text: "The Kaplan Method. Do the full lesson." },
-    { id: "e6",  due: "2026-10-22", lesson: "Lesson 6.1", page: "page 172", text: "Question types. Do the full lesson." },
-    { id: "e7",  due: "2026-10-23", lesson: "Lesson 6.2", page: "page 189", text: "Elimination strategies. Do the full lesson." },
-    { id: "e8",  due: "2026-10-26", lesson: "Lesson 7.1", page: "page 206", text: "Fiction. Do the full lesson." },
-    { id: "e9",  due: "2026-10-27", lesson: "Lesson 7.2", page: "page 228", text: "Poetry. Do the full lesson." },
-    { id: "e10", due: "2026-10-28", lesson: "Lesson 7.3", page: "page 243", text: "Science. Do the full lesson." },
-    { id: "e11", due: "2026-10-29", lesson: "Lesson 8.1", page: "page 258", text: "Question types review. Do the full lesson." },
-    { id: "e15", due: "2026-10-30", lesson: "Lesson 8.2", page: "page 270", text: "Strategic reading & elimination review. Do the full lesson." },
-    { id: "e13", due: "2026-11-02", lesson: "Lesson 18.1", page: "page 518", text: "ELA Strategic Review. Answers start page 751." },
-    { id: "e14", due: "2026-11-03", lesson: "ELA post-its", text: "Redo every ELA post-it still in the book." },
-    { id: "e12", due: "2026-11-07", lesson: "Chapter 17", page: "page 507", text: "Preparing for test day. Short — read it the day before the test." },
+    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before.", tag: "focus" },
+    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", text: "Redo only your wrong ones.", tag: "focus" },
+    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
+    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", text: "Roadmapping. Do the full lesson." },
+    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", text: "The Kaplan Method. Do the full lesson." },
+    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", text: "Question types. Do the full lesson." },
+    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", text: "Elimination strategies. Do the full lesson." },
+    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", text: "Fiction. Do the full lesson." },
+    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", text: "Poetry. Do the full lesson." },
+    { id: "e10", lesson: "Lesson 7.3", page: "page 243", text: "Science. Do the full lesson." },
+    { id: "e11", lesson: "Lesson 8.1", page: "page 258", text: "Question types review. Do the full lesson." },
+    { id: "e15", lesson: "Lesson 8.2", page: "page 270", text: "Strategic reading & elimination review. Do the full lesson." },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", text: "ELA Strategic Review. Answers start page 751." },
+    { id: "e12", lesson: "Chapter 17", page: "page 507", text: "Preparing for test day. Short — read it the day before the test." },
   ],
 };
+// helpers for the saved values
+const isKnown = (v) => typeof v === "string" && v.startsWith("know:");
+const doneDay = (v) => (typeof v === "string" ? v.replace("know:", "") : null);
 const TAGS = {
   focus:  { label: "🎯 weak spot · go straight to the lesson", color: "#F2C14E" },
   strong: { label: "💪 you're good at this · try the Perform set first", color: "#6FE3B4" },
@@ -1103,7 +1103,7 @@ const TOPICS = {
   m15: "solving equations SHSAT algebra", m16: "SHSAT algebra word problems", m17: "SHSAT arithmetic word problems",
   m18: "lines and angles geometry 8th grade", m19: "perimeter and area SHSAT", m20: "SHSAT geometry shapes", m21: "volume surface area 3D shapes",
   m22: "SHSAT geometry word problems", m23: "SHSAT statistics probability word problems", m24: "two way tables surveys 8th grade math",
-  m2: "order of operations number properties", e11: "SHSAT reading question types", e15: "SHSAT reading comprehension elimination",
+  m2: "order of operations number properties", m27: "reading charts and graphs SHSAT", m28: "data tables SHSAT math", e11: "SHSAT reading question types", e15: "SHSAT reading comprehension elimination",
   e1: "misplaced modifiers grammar", e2: "subject verb agreement grammar", e3: "SHSAT revising editing",
   e4: "SHSAT reading comprehension roadmapping", e5: "SHSAT reading comprehension strategy", e6: "SHSAT reading question types",
   e7: "process of elimination reading comprehension", e8: "SHSAT fiction passage", e9: "how to answer poetry questions SHSAT",
@@ -1124,32 +1124,33 @@ function daysUntil(fromKey, toKey) {
   const toDate = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
   return Math.max(0, Math.round((toDate(toKey) - toDate(fromKey)) / 86400000));
 }
-// how many items are past their date and not done
-function countBehind(items, weekDone, todayKey) {
-  return items.filter((i) => i.due < todayKey && !weekDone[i.id]).length;
-}
-
-// One row of the plan.
-function PlanRow({ i, on, isNext, late, toggleWeek, showDue, doneOn }) {
+// One row of the list. The "I know it" button only shows where onKnow is given.
+function PlanRow({ i, on, isNext, toggleWeek, value, showKnow }) {
+  const known = isKnown(value);
+  const day = doneDay(value);
   return (
-    <button onClick={() => toggleWeek(i.id)} aria-label={`${i.lesson}${on ? ", done" : ""}`}
-      style={{ ...S.weekRow, borderColor: on ? "#2A4A3E" : isNext ? "#6FA8FF" : late ? "rgba(242,193,78,0.4)" : "#1E2530", background: on ? "rgba(61,220,151,0.06)" : isNext ? "rgba(46,111,242,0.08)" : "#0F131B" }}>
-      <span style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: on ? "#3DDC97" : "#3A4356", background: on ? "#3DDC97" : "transparent" }}>
-        {on && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
-      </span>
-      <span style={{ flex: 1, textAlign: "left" }}>
-        <span style={{ ...S.display, fontSize: 13.5, color: on ? "#556075" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none" }}>
-          {i.lesson}{i.page && <span style={{ ...S.mono, fontSize: 10.5, color: on ? "#3A4356" : "#6FA8FF", fontWeight: 400 }}> ({i.page})</span>}
+    <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+      <button onClick={() => toggleWeek(i.id)} aria-label={`${i.lesson}${on ? (known ? ", known" : ", done") : ""}`}
+        style={{ ...S.weekRow, marginBottom: 0, flex: 1, borderColor: on ? "#2A4A3E" : isNext ? "#6FA8FF" : "#1E2530", background: on ? "rgba(61,220,151,0.06)" : isNext ? "rgba(46,111,242,0.08)" : "#0F131B" }}>
+        <span style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: on ? (known ? "#6FA8FF" : "#3DDC97") : "#3A4356", background: on ? (known ? "#6FA8FF" : "#3DDC97") : "transparent" }}>
+          {on && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{known ? "K" : "✓"}</span>}
         </span>
-        <span style={{ ...S.body, fontSize: 12, color: on ? "#3A4356" : "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>
-        {i.tag && !on && <span style={{ ...S.mono, fontSize: 9.5, color: TAGS[i.tag].color, display: "block", marginTop: 4, lineHeight: 1.4 }}>{TAGS[i.tag].label}</span>}
-      </span>
-      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, alignSelf: "center" }}>
-        {isNext && <span style={{ ...S.mono, fontSize: 9, color: "#6FA8FF" }}>NEXT</span>}
-        {showDue && !on && <span style={{ ...S.mono, fontSize: 9, color: late ? "#F2C14E" : "#556075", whiteSpace: "nowrap" }}>{late ? "late · " : "by "}{shortDate(i.due)}</span>}
-        {on && typeof doneOn === "string" && <span style={{ ...S.mono, fontSize: 9, color: "#3A4356", whiteSpace: "nowrap" }}>done {shortDate(doneOn)}</span>}
-      </span>
-    </button>
+        <span style={{ flex: 1, textAlign: "left" }}>
+          <span style={{ ...S.display, fontSize: 13.5, color: on ? "#556075" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none" }}>
+            {i.lesson}{i.page && <span style={{ ...S.mono, fontSize: 10.5, color: on ? "#3A4356" : "#6FA8FF", fontWeight: 400 }}> ({i.page})</span>}
+          </span>
+          <span style={{ ...S.body, fontSize: 12, color: on ? "#3A4356" : "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>
+          {i.tag && !on && <span style={{ ...S.mono, fontSize: 9.5, color: TAGS[i.tag].color, display: "block", marginTop: 4, lineHeight: 1.4 }}>{TAGS[i.tag].label}</span>}
+        </span>
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, alignSelf: "center" }}>
+          {isNext && <span style={{ ...S.mono, fontSize: 9, color: "#6FA8FF" }}>NEXT</span>}
+          {on && <span style={{ ...S.mono, fontSize: 9, color: known ? "#6FA8FF" : "#3A4356", whiteSpace: "nowrap" }}>{known ? "knew it" : "done"}{day ? ` ${shortDate(day)}` : ""}</span>}
+        </span>
+      </button>
+      {showKnow && !on && (
+        <button onClick={() => toggleWeek(i.id, "know")} aria-label={`I know ${i.lesson}`} style={S.knowBtn}>I know<br />it</button>
+      )}
+    </div>
   );
 }
 
@@ -1168,49 +1169,52 @@ function HowToBox() {
   );
 }
 
-// Pace line shared by the Kaplan box and the To Do tab.
-function PaceLine({ weekDone, todayKey }) {
-  const behind = countBehind(KAPLAN_PLAN.math, weekDone, todayKey) + countBehind(KAPLAN_PLAN.ela, weekDone, todayKey);
-  const isSunday = new Date().getDay() === 0;
-  if (behind === 0) return <div style={{ ...S.body, fontSize: 12.5, color: "#6FE3B4", margin: "8px 2px 0" }}>On track ✓</div>;
+// "X left · Y days to the test · about Z a day" - used in the Kaplan box and Test List.
+function RemainingLine({ weekDone, todayKey }) {
+  const all = [...KAPLAN_PLAN.math, ...KAPLAN_PLAN.ela];
+  const left = all.filter((i) => !weekDone[i.id]).length;
+  const days = daysUntil(todayKey, TEST_DATE); // test day itself isn't a study day
+  const perDay = days > 0 ? Math.max(1, Math.round(left / days)) : left;
+  if (left === 0) return <div style={{ ...S.body, fontSize: 12.5, color: "#3DDC97", margin: "8px 2px 0" }}>Everything's done ✓</div>;
   return (
-    <div style={{ ...S.body, fontSize: 12.5, color: "#F2C14E", margin: "8px 2px 0" }}>
-      {behind} behind. {isSunday ? "Today's a catch-up day — knock some out." : "Do today's, then one extra to catch up."}
+    <div style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", margin: "8px 2px 0" }}>
+      <b>{left} left</b> · {days} day{days === 1 ? "" : "s"} to the test · <span style={{ color: perDay >= 3 ? "#F2C14E" : "#6FE3B4" }}>about {perDay} a day</span>
     </div>
   );
 }
 
-// ---- TO DO tab -------------------------------------------------------
-// The whole plan, in order, with dates. Done items stay crossed off.
-function ToDoTab({ weekDone, toggleWeek, todayKey }) {
-  const all = [...KAPLAN_PLAN.math, ...KAPLAN_PLAN.ela];
-  const doneCount = all.filter((i) => weekDone[i.id]).length;
-  const List = ({ title, items }) => {
+// ---- TEST LIST tab ---------------------------------------------------
+// Everything left for the test, in one place. Done items stay crossed off.
+function TestListTab({ weekDone, toggleWeek, todayKey }) {
+  const List = ({ title, items, note }) => {
     const next = items.find((i) => !weekDone[i.id]);
     const count = items.filter((i) => weekDone[i.id]).length;
     return (
-      <div style={{ marginTop: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 6px" }}>
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 4px" }}>
           <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</span>
           <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length}</span>
         </div>
+        {note && <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", margin: "0 2px 8px" }}>{note}</div>}
         {items.map((i) => (
           <PlanRow key={i.id} i={i} on={!!weekDone[i.id]} isNext={next && next.id === i.id}
-            late={i.due < todayKey && !weekDone[i.id]} toggleWeek={toggleWeek} showDue doneOn={weekDone[i.id]} />
+            toggleWeek={toggleWeek} value={weekDone[i.id]} showKnow />
         ))}
       </div>
     );
   };
+  const m = KAPLAN_PLAN.math;
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text={`KAPLAN PLAN · TEST ${shortDate(TEST_DATE).toUpperCase()} (ASSUMED) · ${daysUntil(todayKey, TEST_DATE)} DAYS LEFT`} />
+      <SectionLabel text={`EVERYTHING FOR THE TEST · ${shortDate(TEST_DATE).toUpperCase()} (ASSUMED)`} />
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 0" }}>
-        About 2 hrs Math + 1 hr ELA a day. Go in order, starting at the one marked <span style={{ color: "#6FA8FF" }}>NEXT</span>. Sundays are for catching up. {doneCount}/{all.length} done.
+        Go top to bottom, starting at <span style={{ color: "#6FA8FF" }}>NEXT</span>. Math first every day. Only skip something if you really know it — tap <b>I know it</b> (best decided with your tutor).
       </p>
-      <PaceLine weekDone={weekDone} todayKey={todayKey} />
+      <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <HowToBox />
-      <List title="📐 Math" items={KAPLAN_PLAN.math} />
-      <List title="📖 ELA" items={KAPLAN_PLAN.ela} />
+      <List title="📐 Math — 🎯 weak spots first" items={m.filter((i) => i.group !== "rest")} note="These are where your points are. Do every one." />
+      <List title="📐 Math — everything else" items={m.filter((i) => i.group === "rest")} />
+      <List title="📖 ELA" items={KAPLAN_PLAN.ela} note="In order — each reading lesson builds on the last." />
     </div>
   );
 }
@@ -1353,6 +1357,7 @@ const S = {
   weekRow: { display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginBottom: 6, borderRadius: 10, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
   howBox: { marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)" },
   ytLink: { display: "inline-block", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "#E06C6C", textDecoration: "none", margin: "0 2px 6px", padding: "4px 8px", border: "1px solid rgba(224,108,108,0.35)", borderRadius: 6 },
+  knowBtn: { minWidth: 52, border: "1px solid #2A3242", background: "#161B26", color: "#6FA8FF", borderRadius: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, lineHeight: 1.3, cursor: "pointer", padding: "0 6px" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },
   timerBox: { marginTop: 11, paddingTop: 11, borderTop: "1px solid #1E2530" },
