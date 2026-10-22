@@ -6,8 +6,8 @@ admissions exam) while our parent was traveling and couldn't check in on him
 every day in person.
 
 It's a single-page React app that changes what it shows based on the day of
-the week, runs a countdown timer through a multi-step study method, and
-remembers his progress across days.
+the week, tracks how long he actually studies, lays out everything left to
+cover before the test, and remembers his progress across days.
 
 ## Why this exists
 
@@ -20,28 +20,35 @@ parent nagging him about it.
 
 ## What it does
 
-- **Different checklist for different days** — school-night study blocks
-  Mon–Fri, Khan's tutoring day quests on Sat/Sun (with the correct class time
-  for each)
-- **A built-in countdown timer** that auto-advances through study phases
-  (e.g. 60 min closed-book practice → 20 min self-check → 20 min redo before
-  looking at the answer) and checks the task off automatically when it
-  finishes
-- **Progress that survives closing the app** — checkmarks, notes, and history
-  are all saved and reloaded automatically
-- **A calendar view** of every day he's actually cleared, built from real date
-  math, not a library
-- **A notes section** for logging problems/questions that come up mid-study,
-  so nothing gets forgotten while a parent is away
-- **A backup/restore code** so his whole history can be carried over if the
-  app is ever rebuilt into a new version
+- **Different checklist for different days**: school nights Mon–Fri, and
+  tutoring-day lists on Sat/Sun with the right class time for each
+- **One box per kind of work, in the order of his day**: school homework, the
+  Kaplan prep book (Math and ELA), and the tutoring center's weekly homework,
+  with a questions-done counter and an "on pace / behind" line so it doesn't
+  pile up on the last day
+- **Study timers that keep counting with the screen off**: they save real
+  start / break / stop times and work out the totals from the clock, so
+  locking the phone or closing the app never loses time
+- **A Test List** of every lesson left before the test, with page numbers,
+  ordered so his weakest topics (taken from his practice-test results) come
+  first, plus an "I know it" button for skipping topics he's already solid on
+- **A calendar** showing each day's study time and lessons finished,
+  color-coded, and tapping a day shows what got done
+- **A phone-time cap**, and his PS5 "unlocks" once the day's work is done
+- **A Post-its tab** that explains his study method step by step
+- **Notes and a backup/restore code**, so questions don't get forgotten and
+  his history can move to a new version of the app
 
 ## Tech stack
 
 - React (functional components + hooks — `useState`, `useEffect`)
 - JSX
 - Plain JS objects for styling (no CSS framework)
-- A simple key-value storage API for persistence 
+- The browser's localStorage for saving (single user, so no backend needed)
+- Hosted on GitHub Pages as one `index.html`: React and Babel are loaded from
+  a CDN and the JSX is compiled in the browser. The CDN versions are pinned,
+  because an unpinned link once auto-upgraded to Babel 8 and broke the page.
+  For a bigger app I'd use a real build step (like Vite) instead.
 
 ## How it's built
 
@@ -63,4 +70,4 @@ coursework.
 
 Actively used by one person (my brother) as of Fall 2026. Not intended as a
 general purpose product — it's specific to his schedule and his tutoring 
-program's method.x
+program's method.
