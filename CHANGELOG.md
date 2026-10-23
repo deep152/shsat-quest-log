@@ -23,7 +23,8 @@ from watching my brother actually use it. Each version's full code is in
 | 15 | Oct 17 | [Page numbers + Nov 8](versions/2026-10-17-v15-toc-nov8.jsx) |
 | 16 | Oct 21 | [Test List](versions/2026-10-21-v16-test-list.jsx) |
 | — | Oct 22 | Live site fix |
-| 17 | Oct 22 | [Do these 2 today (current)](versions/2026-10-22-v17-do-these-2.jsx) |
+| 17 | Oct 22 | [Do these 2 today](versions/2026-10-22-v17-do-these-2.jsx) |
+| 18 | Oct 23 | [Bonus lessons (current)](versions/2026-10-23-v18-bonus-lessons.jsx) |
 
 ---
 
@@ -151,7 +152,7 @@ and a tutor can help decide what he already knows.
   number, and that link had moved to Babel 8, which turns JSX into `import`
   statements a plain page can't run. React and Babel are now pinned to exact versions.
 
-### v17 · Oct 22 · Do these 2 today (current)
+### v17 · Oct 22 · Do these 2 today
 - A big "Do these 2 today" card at the top of the Today tab: one Math lesson and
   one ELA lesson, each with a big ✓ Done button. They stay on the card all day.
 - A 👨‍🏫 Too hard button on math. It puts the lesson on a "For your tutor" list
@@ -164,3 +165,13 @@ and a tutor can help decide what he already knows.
 **Why:** too many words and too many tabs. He needed one clear thing to do each
 day. He also started with a math tutor 5 days a week, so hard math now has
 somewhere to go. And his test is Nov 18, not Nov 8.
+
+### v18 · Oct 23 · Bonus lessons (current)
+- Once both lessons are done, a ⭐ BONUS card hands him one more lesson at a
+  time, math first. Extras stay on the card, crossed off, with undo.
+- The tutor check moved to right after homework.
+- Took out the YouTube links.
+
+**Why:** 2 lessons is the minimum, not the limit, and math has about twice as
+many lessons left as ELA. His day goes home → homework → tutor at 4. And a
+YouTube search on his phone is one tap from Shorts.

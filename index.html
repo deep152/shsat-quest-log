@@ -85,7 +85,7 @@ const C = {
 const DAY_PLANS = {
   weekday: {
     label: "SCHOOL DAY · TUTOR 4–5:30",
-    top: [C.home, C.tutor], school: [C.schoolhw], kaplan: [C.checked], bottom: [C.kindle, C.dinner],
+    top: [C.home], school: [C.schoolhw], tutor: [C.tutor], kaplan: [C.checked], bottom: [C.kindle, C.dinner],
   },
   khans_sat: {
     label: "KHAN'S DAY · 10:00–1:30",
@@ -98,7 +98,7 @@ const DAY_PLANS = {
     school: [C.schoolmon], kaplan: [C.checked, C.postit], bottom: [C.kindle, C.dinner],
   },
 };
-const allChecks = (plan) => [...plan.top, ...plan.school, ...plan.kaplan, ...plan.bottom];
+const allChecks = (plan) => [...plan.top, ...plan.school, ...(plan.tutor || []), ...plan.kaplan, ...plan.bottom];
 
 const KHANS_DEFAULT_TOTAL = 30; // questions per weekly set - editable in the app
 
@@ -444,6 +444,7 @@ function TodayTab(props) {
         {plan.top.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} />)}
 
         <SchoolCard {...props} />
+        {(plan.tutor || []).map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} />)}
         <KaplanCard {...props} />
         <KhansCard {...props} />
 
@@ -1012,23 +1013,6 @@ const TAGS = {
   focus:  { label: "🎯 weak spot", color: "#F2C14E" },
   strong: { label: "💪 strong topic", color: "#6FE3B4" },
 };
-// What to search on YouTube for each lesson (only where the topic is known).
-const TOPICS = {
-  m3: "SHSAT picking numbers strategy", m4: "SHSAT backsolving", m5: "fractions and decimals 8th grade",
-  m6: "factors multiples LCM GCF number line", m7: "SHSAT percent problems", m8: "mean median mode range",
-  m9: "rate problems distance rate time", m10: "ratios and proportions SHSAT", m11: "coordinate plane 8th grade",
-  m12: "SHSAT probability", m13: "solving equations SHSAT algebra", m14: "solving equations SHSAT algebra",
-  m15: "solving equations SHSAT algebra", m16: "SHSAT algebra word problems", m17: "SHSAT arithmetic word problems",
-  m18: "lines and angles geometry 8th grade", m19: "perimeter and area SHSAT", m20: "SHSAT geometry shapes", m21: "volume surface area 3D shapes",
-  m22: "SHSAT geometry word problems", m23: "SHSAT statistics probability word problems", m24: "two way tables surveys 8th grade math",
-  m2: "order of operations number properties", m27: "reading charts and graphs SHSAT", m28: "data tables SHSAT math", e11: "SHSAT reading question types", e15: "SHSAT reading comprehension elimination",
-  e1: "misplaced modifiers grammar", e2: "subject verb agreement grammar", e3: "SHSAT revising editing",
-  e4: "SHSAT reading comprehension roadmapping", e5: "SHSAT reading comprehension strategy", e6: "SHSAT reading question types",
-  e7: "process of elimination reading comprehension", e8: "SHSAT fiction passage", e9: "how to answer poetry questions SHSAT",
-  e10: "SHSAT science passage reading",
-};
-const youtubeLink = (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
-
 const MATH_ANSWERS_PAGE = 641;
 const ELA_ANSWERS_PAGE = 533;
 
@@ -1153,10 +1137,12 @@ function TutorList({ weekDone }) {
 }
 
 // ---- "DO THESE 2 TODAY" -------------------------------------------------
-// The first thing on the Today tab, in big type. Normally one Math + one ELA.
-// Anything he handles today (done or sent to the tutor) stays in its spot, so
-// the card shows the same 2 all day. If one subject is finished, both come
-// from the other one.
+// The first thing on the Today tab, in big type: one Math + one ELA. Anything
+// he handles today (done or sent to the tutor) stays in its spot, so it's the
+// same 2 all day. Once both are handled, a BONUS card hands him one more at a
+// time, math first: math has about twice as many lessons left as ELA, and the
+// tutor backs it up. Extras he finishes stay on the card, crossed off, with
+// undo, so a mis-tap never makes one disappear.
 function TodayCard({ weekDone, toggleWeek, todayKey }) {
   const handled = (items) => items.filter((i) => doneDay(weekDone[i.id]) === todayKey && !isKnown(weekDone[i.id]));
   const open = (items) => items.filter((i) => !weekDone[i.id]);
@@ -1170,45 +1156,68 @@ function TodayCard({ weekDone, toggleWeek, todayKey }) {
     add(i, isMath);
   }
   const allHandled = picks.length > 0 && picks.every((p) => weekDone[p.i.id]);
+  const extras = [...handled(m).map((i) => ({ i, isMath: true })), ...handled(e).map((i) => ({ i, isMath: false }))]
+    .filter((x) => !picks.some((p) => p.i.id === x.i.id));
+  const bonus = !allHandled ? null : open(m)[0] ? { i: open(m)[0], isMath: true } : open(e)[0] ? { i: open(e)[0], isMath: false } : null;
 
   return (
     <div style={S.heroCard}>
       <div style={{ ...S.display, fontSize: 24, color: "#E8ECF4", lineHeight: 1.15 }}>
         {allHandled ? "Both done 🔥" : picks.length ? "Do these 2 today" : "Everything's done 🎉"}
       </div>
-      {picks.map(({ i, isMath }) => {
-        const v = weekDone[i.id];
-        const on = isDone(v), tutor = isTutor(v);
-        return (
-          <div key={i.id} style={{ ...S.heroTask, borderColor: on ? "#3DDC97" : tutor ? TUTOR_COLOR : "#2E6FF2", opacity: on ? 0.75 : 1 }}>
-            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598" }}>
-              {isMath ? "📐 MATH" : "📖 ELA"}{i.tag && !on && !tutor ? ` · ${TAGS[i.tag].label}` : ""}
-            </div>
-            <div style={{ ...S.display, fontSize: 22, color: on ? "#6FE3B4" : "#E8ECF4", marginTop: 4, textDecorationLine: on ? "line-through" : "none" }}>{i.lesson}</div>
-            {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 2 }}>{i.page}</div>}
-            {!on && !tutor && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
-            {tutor && <div style={{ ...S.body, fontSize: 12.5, color: TUTOR_COLOR, marginTop: 4 }}>👨‍🏫 On the tutor list. Bring it 4–5:30.</div>}
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button onClick={() => toggleWeek(i.id)} aria-label={`${on ? "Undo" : "Done"} ${i.lesson}`}
-                style={{ ...S.heroBtn, background: on ? "#1E2530" : "#3DDC97", color: on ? "#8A94A8" : "#0B0E14" }}>
-                {on ? "↺ undo" : "✓ DONE"}
-              </button>
-              {isMath && !on && !tutor && (
-                <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
-                  style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
-                  👨‍🏫 Too hard
-                </button>
-              )}
-            </div>
-            {!on && !tutor && TOPICS[i.id] && (
-              <a href={youtubeLink(TOPICS[i.id])} target="_blank" rel="noopener noreferrer" style={{ ...S.ytLink, marginTop: 8 }}>▶ Stuck? YouTube it</a>
-            )}
-          </div>
-        );
-      })}
-      {allHandled && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 10 }}>Time left? Keep going on the Test List.</div>}
+      {picks.map((p) => <HeroTask key={p.i.id} {...p} value={weekDone[p.i.id]} toggleWeek={toggleWeek} />)}
+      {extras.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", marginBottom: 4 }}>EXTRA TODAY 🔥 +{extras.length}</div>
+          {extras.map(({ i }) => {
+            const tutor = isTutor(weekDone[i.id]);
+            return (
+              <div key={i.id} style={S.extraRow}>
+                <span style={{ ...S.display, fontSize: 14, color: tutor ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: tutor ? "none" : "line-through" }}>
+                  {tutor ? "👨‍🏫" : "✓"} {i.lesson}
+                </span>
+                <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {bonus && (
+        <>
+          <div style={{ ...S.body, fontSize: 13, color: "#C9D2E0", marginTop: 12 }}>Got time? One more 👇</div>
+          <HeroTask {...bonus} bonus value={weekDone[bonus.i.id]} toggleWeek={toggleWeek} />
+        </>
+      )}
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} />
+    </div>
+  );
+}
+
+// One lesson on the card: big name, page, ✓ DONE, and 👨‍🏫 Too hard for math.
+function HeroTask({ i, isMath, bonus, value, toggleWeek }) {
+  const on = isDone(value), tutor = isTutor(value);
+  return (
+    <div style={{ ...S.heroTask, borderColor: on ? "#3DDC97" : tutor ? TUTOR_COLOR : bonus ? "#F2C14E" : "#2E6FF2", opacity: on ? 0.75 : 1 }}>
+      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: bonus ? "#F2C14E" : "#7A8598" }}>
+        {bonus ? "⭐ BONUS · " : ""}{isMath ? "📐 MATH" : "📖 ELA"}{i.tag && !on && !tutor ? ` · ${TAGS[i.tag].label}` : ""}
+      </div>
+      <div style={{ ...S.display, fontSize: 22, color: on ? "#6FE3B4" : "#E8ECF4", marginTop: 4, textDecorationLine: on ? "line-through" : "none" }}>{i.lesson}</div>
+      {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 2 }}>{i.page}</div>}
+      {!on && !tutor && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
+      {tutor && <div style={{ ...S.body, fontSize: 12.5, color: TUTOR_COLOR, marginTop: 4 }}>👨‍🏫 On the tutor list. Bring it 4–5:30.</div>}
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button onClick={() => toggleWeek(i.id)} aria-label={`${on ? "Undo" : "Done"} ${i.lesson}`}
+          style={{ ...S.heroBtn, background: on ? "#1E2530" : "#3DDC97", color: on ? "#8A94A8" : "#0B0E14" }}>
+          {on ? "↺ undo" : "✓ DONE"}
+        </button>
+        {isMath && !on && !tutor && (
+          <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
+            style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
+            👨‍🏫 Too hard
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1352,11 +1361,12 @@ const S = {
   totalInput: { width: 54, background: "#161B26", border: "1px solid #2A3242", borderRadius: 6, color: "#E8ECF4", fontFamily: "'JetBrains Mono', monospace", fontSize: 13, padding: "3px 6px" },
   weekRow: { display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginBottom: 6, borderRadius: 10, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
   howBox: { marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)" },
-  ytLink: { display: "inline-block", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "#E06C6C", textDecoration: "none", margin: "0 2px 6px", padding: "4px 8px", border: "1px solid rgba(224,108,108,0.35)", borderRadius: 6 },
   heroCard: { border: "1px solid #2A3242", borderRadius: 16, background: "#12161F", padding: "16px 14px", marginBottom: 12 },
   heroTask: { border: "2px solid", borderRadius: 14, background: "#0F131B", padding: "12px 12px", marginTop: 12 },
   heroBtn: { flex: 1, border: "none", borderRadius: 10, padding: "12px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: 1, cursor: "pointer" },
   tutorBtn: { minWidth: 52, border: "1px solid rgba(192,140,255,0.5)", background: "#161B26", color: "#C08CFF", borderRadius: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, lineHeight: 1.3, cursor: "pointer", padding: "0 6px" },
+  extraRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 10px", borderRadius: 10, border: "1px solid #1E2530", background: "#0F131B", marginTop: 5 },
+  extraUndo: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#7A8598", background: "none", border: "1px solid #2A3242", borderRadius: 6, padding: "3px 8px", cursor: "pointer" },
   tutorBox: { marginTop: 10, padding: "9px 11px", borderRadius: 10, border: "1px solid rgba(192,140,255,0.35)", background: "rgba(192,140,255,0.07)", fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#D9C2FF" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },
