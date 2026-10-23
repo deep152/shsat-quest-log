@@ -403,7 +403,7 @@ function TodayTab(props) {
     <>
       <div style={{ padding: "0 16px" }}>
         <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "0 2px 10px" }}>{plan.label} · 🌙 DONE BY 10:30</div>
-        {spamming && <div style={S.spamBanner}>chill lil kid, lock in 🔒</div>}
+        {spamming && <div style={S.spamBanner}>lock in lil kid 🔒</div>}
 
         <TodayCard {...props} />
 
@@ -903,11 +903,13 @@ function DayDetail({ k, info, todayKey }) {
   );
 }
 
-// ---- the Test List (updated Oct 21) --------------------------------------
+// ---- the Test List (updated Oct 23) --------------------------------------
 // Everything left for the test, one list per subject. No dates - he works top
 // to bottom, and the first unchecked item is NEXT. Math is in priority order:
 // weak spots first, so if time runs out, what's left is the least important.
 // ELA stays in book order because the reading lessons build on each other.
+// Math starts at Ch 11 (Arithmetic), where his tutor started him: it's the base
+// for algebra and word problems, and his practice tests were weakest there.
 //
 // Nothing is skipped. He does each lesson's Perform set (the last ~2 pages):
 // easy = done, hard math = 👨‍🏫 sent to his math tutor (Mon-Fri 4:00-5:30).
@@ -926,10 +928,12 @@ const KAPLAN_PLAN = {
     { id: "m2",  lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform just before page 315." },
     { id: "m3",  lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform just before page 320." },
     // weak spots first
-    { id: "m4",  group: "weak", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
     { id: "m5",  group: "weak", lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform just before page 334.", tag: "focus" },
     { id: "m6",  group: "weak", lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform just before page 343.", tag: "focus" },
     { id: "m9",  group: "weak", lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform just before page 360.", tag: "focus" },
+    // Backsolving is a test trick (plug in the answer choices) used most on
+    // equations, so it goes right before Algebra.
+    { id: "m4",  group: "weak", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
     { id: "m13", group: "weak", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform just before page 388.", tag: "focus" },
     { id: "m14", group: "weak", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform just before page 396.", tag: "focus" },
     { id: "m15", group: "weak", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform just before page 403.", tag: "focus" },
@@ -1102,82 +1106,90 @@ function TutorList({ weekDone }) {
   );
 }
 
-// ---- "DO THESE 2 TODAY" -------------------------------------------------
-// The first thing on the Today tab, in big type: one Math + one ELA. Anything
-// he handles today (done or sent to the tutor) stays in its spot, so it's the
-// same 2 all day. Once both are handled, a BONUS card hands him one more at a
-// time, math first: math has about twice as many lessons left as ELA, and the
-// tutor backs it up. Extras he finishes stay on the card, crossed off, with
-// undo, so a mis-tap never makes one disappear.
+// ---- TODAY'S LESSONS ---------------------------------------------------
+// The first thing on the Today tab. A Math lane on top and an ELA lane under it.
+// Each lane shows the next lesson in that subject, and when he finishes one the
+// next one shows up right there, so he can do 3 math in a row if he's on a roll.
+// Lessons he handled today stay in the lane, crossed off, with undo.
+//
+// The goal is 2 a day with at least 1 math. ELA is every other day: if he did no
+// ELA yesterday, 1 ELA is part of today's 2. Math has about twice as many lessons
+// left and the tutor backs it up, so most of the time goes to math.
 function TodayCard({ weekDone, toggleWeek, todayKey }) {
-  const handled = (items) => items.filter((i) => doneDay(weekDone[i.id]) === todayKey && !isKnown(weekDone[i.id]));
-  const open = (items) => items.filter((i) => !weekDone[i.id]);
+  const handledOn = (i, k) => { const v = weekDone[i.id]; return !!v && !isKnown(v) && doneDay(v) === k; };
   const m = KAPLAN_PLAN.math, e = KAPLAN_PLAN.ela;
-  const picks = [];
-  const add = (i, isMath) => { if (i && !picks.some((p) => p.i.id === i.id)) picks.push({ i, isMath }); };
-  add(handled(m)[0] || open(m)[0], true);
-  add(handled(e)[0] || open(e)[0], false);
-  for (const [i, isMath] of [...handled(m).map((x) => [x, true]), ...open(m).map((x) => [x, true]), ...handled(e).map((x) => [x, false]), ...open(e).map((x) => [x, false])]) {
-    if (picks.length >= 2) break;
-    add(i, isMath);
-  }
-  const allHandled = picks.length > 0 && picks.every((p) => weekDone[p.i.id]);
-  const extras = [...handled(m).map((i) => ({ i, isMath: true })), ...handled(e).map((i) => ({ i, isMath: false }))]
-    .filter((x) => !picks.some((p) => p.i.id === x.i.id));
-  const bonus = !allHandled ? null : open(m)[0] ? { i: open(m)[0], isMath: true } : open(e)[0] ? { i: open(e)[0], isMath: false } : null;
+  const mToday = m.filter((i) => handledOn(i, todayKey));
+  const eToday = e.filter((i) => handledOn(i, todayKey));
+  const mNext = m.find((i) => !weekDone[i.id]);
+  const eNext = e.find((i) => !weekDone[i.id]);
+  const elaDue = !e.some((i) => handledOn(i, addDays(todayKey, -1))) && (eToday.length > 0 || !!eNext);
+  const count = mToday.length + eToday.length;
+  const needMath = mToday.length === 0 && !!mNext;
+  const needEla = elaDue && eToday.length === 0;
+  const nothingLeft = !mNext && !eNext;
+  const met = (count >= 2 || nothingLeft) && !needMath && !needEla;
 
   return (
     <div style={S.heroCard}>
-      <div style={{ ...S.display, fontSize: 24, color: "#E8ECF4", lineHeight: 1.15 }}>
-        {allHandled ? "Both done 🔥" : picks.length ? "Do these 2 today" : "Everything's done 🎉"}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <span style={{ ...S.display, fontSize: 24, color: "#E8ECF4", lineHeight: 1.15 }}>
+          {nothingLeft && count === 0 ? "Everything's done 🎉" : met ? `${count} done 🔥` : count >= 2 ? "Almost there" : "Do 2 today"}
+        </span>
+        {!met && count < 2 && <span style={{ ...S.mono, fontSize: 12, color: "#6FA8FF" }}>{count}/2</span>}
       </div>
-      {picks.map((p) => <HeroTask key={p.i.id} {...p} value={weekDone[p.i.id]} toggleWeek={toggleWeek} />)}
-      {extras.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", marginBottom: 4 }}>EXTRA TODAY 🔥 +{extras.length}</div>
-          {extras.map(({ i }) => {
-            const tutor = isTutor(weekDone[i.id]);
-            return (
-              <div key={i.id} style={S.extraRow}>
-                <span style={{ ...S.display, fontSize: 14, color: tutor ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: tutor ? "none" : "line-through" }}>
-                  {tutor ? "👨‍🏫" : "✓"} {i.lesson}
-                </span>
-                <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {bonus && (
-        <>
-          <div style={{ ...S.body, fontSize: 13, color: "#C9D2E0", marginTop: 12 }}>Got time? One more 👇</div>
-          <HeroTask {...bonus} bonus value={weekDone[bonus.i.id]} toggleWeek={toggleWeek} />
-        </>
-      )}
+      <div style={{ ...S.body, fontSize: 13, color: met ? "#6FE3B4" : count >= 2 ? "#F2C14E" : "#C9D2E0", marginTop: 4 }}>
+        {met ? (nothingLeft ? "Review your post-its." : "Keep going if you can 👇")
+          : count >= 2 ? (needEla ? "1 📖 ELA still due today" : "1 📐 math still due today")
+          : elaDue ? "1 📐 math + 1 📖 ELA" : "📐 Math first"}
+      </div>
+
+      <Lane title="📐 MATH" isMath today={mToday} next={mNext} weekDone={weekDone} toggleWeek={toggleWeek}
+        note={mToday.length ? `✓ ${mToday.length} today` : "start here"} />
+      <Lane title="📖 ELA" today={eToday} next={eNext} weekDone={weekDone} toggleWeek={toggleWeek}
+        note={eToday.length ? `✓ ${eToday.length} today` : elaDue ? "1 due today" : "if you have time"} />
+
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} />
     </div>
   );
 }
 
-// One lesson on the card: big name, page, ✓ DONE, and 👨‍🏫 Too hard for math.
-function HeroTask({ i, isMath, bonus, value, toggleWeek }) {
-  const on = isDone(value), tutor = isTutor(value);
+// One subject: what he handled today (small, crossed off) and then the next one, big.
+function Lane({ title, isMath, today, next, note, weekDone, toggleWeek }) {
   return (
-    <div style={{ ...S.heroTask, borderColor: on ? "#3DDC97" : tutor ? TUTOR_COLOR : bonus ? "#F2C14E" : "#2E6FF2", opacity: on ? 0.75 : 1 }}>
-      <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: bonus ? "#F2C14E" : "#7A8598" }}>
-        {bonus ? "⭐ BONUS · " : ""}{isMath ? "📐 MATH" : "📖 ELA"}{i.tag && !on && !tutor ? ` · ${TAGS[i.tag].label}` : ""}
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px" }}>
+        <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>{title}</span>
+        <span style={{ ...S.mono, fontSize: 10, color: note.startsWith("✓") ? "#6FE3B4" : note === "1 due today" ? "#F2C14E" : "#556075" }}>{note}</span>
       </div>
-      <div style={{ ...S.display, fontSize: 22, color: on ? "#6FE3B4" : "#E8ECF4", marginTop: 4, textDecorationLine: on ? "line-through" : "none" }}>{i.lesson}</div>
+      {today.map((i) => {
+        const tutor = isTutor(weekDone[i.id]);
+        return (
+          <div key={i.id} style={S.extraRow}>
+            <span style={{ ...S.display, fontSize: 14, color: tutor ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: tutor ? "none" : "line-through" }}>
+              {tutor ? "👨‍🏫" : "✓"} {i.lesson}
+            </span>
+            <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
+          </div>
+        );
+      })}
+      {next ? <HeroTask i={next} isMath={isMath} toggleWeek={toggleWeek} />
+            : <div style={{ ...S.body, fontSize: 13, color: "#6FE3B4", margin: "6px 2px 0" }}>All {isMath ? "math" : "ELA"} done ✓</div>}
+    </div>
+  );
+}
+
+// The next lesson in a lane: big name, page, ✓ DONE, and 👨‍🏫 Too hard for math.
+function HeroTask({ i, isMath, toggleWeek }) {
+  return (
+    <div style={{ ...S.heroTask, marginTop: 6 }}>
+      {i.tag && <div style={{ ...S.mono, fontSize: 10, color: TAGS[i.tag].color }}>{TAGS[i.tag].label}</div>}
+      <div style={{ ...S.display, fontSize: 22, color: "#E8ECF4", marginTop: i.tag ? 3 : 0 }}>{i.lesson}</div>
       {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 2 }}>{i.page}</div>}
-      {!on && !tutor && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
-      {tutor && <div style={{ ...S.body, fontSize: 12.5, color: TUTOR_COLOR, marginTop: 4 }}>👨‍🏫 On the tutor list. Bring it 4–5:30.</div>}
+      <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button onClick={() => toggleWeek(i.id)} aria-label={`${on ? "Undo" : "Done"} ${i.lesson}`}
-          style={{ ...S.heroBtn, background: on ? "#1E2530" : "#3DDC97", color: on ? "#8A94A8" : "#0B0E14" }}>
-          {on ? "↺ undo" : "✓ DONE"}
-        </button>
-        {isMath && !on && !tutor && (
+        <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ DONE</button>
+        {isMath && (
           <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
             style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
             👨‍🏫 Too hard
@@ -1328,7 +1340,7 @@ const S = {
   weekRow: { display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginBottom: 6, borderRadius: 10, border: "1px solid", cursor: "pointer", fontFamily: "inherit", alignItems: "flex-start" },
   howBox: { marginTop: 10, padding: "11px 12px", borderRadius: 10, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)" },
   heroCard: { border: "1px solid #2A3242", borderRadius: 16, background: "#12161F", padding: "16px 14px", marginBottom: 12 },
-  heroTask: { border: "2px solid", borderRadius: 14, background: "#0F131B", padding: "12px 12px", marginTop: 12 },
+  heroTask: { border: "2px solid #2E6FF2", borderRadius: 14, background: "#0F131B", padding: "12px 12px", marginTop: 12 },
   heroBtn: { flex: 1, border: "none", borderRadius: 10, padding: "12px 0", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: 1, cursor: "pointer" },
   tutorBtn: { minWidth: 52, border: "1px solid rgba(192,140,255,0.5)", background: "#161B26", color: "#C08CFF", borderRadius: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, lineHeight: 1.3, cursor: "pointer", padding: "0 6px" },
   extraRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 10px", borderRadius: 10, border: "1px solid #1E2530", background: "#0F131B", marginTop: 5 },

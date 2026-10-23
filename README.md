@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 18 versions based on how he actually used it.
+through 19 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -18,9 +18,9 @@ nag him.
 
 ## What it does
 
-- **"Do these 2 today"** at the top of the home screen: one Math lesson and
-  one ELA lesson in big type, each with a big ✓ Done button. Once both are
-  done, it hands him one bonus lesson at a time.
+- **"Do 2 today"** at the top of the home screen: a Math lane and an ELA lane
+  in big type. Finishing a lesson shows the next one in that subject right
+  away, so he can keep going. 2 a day minimum, with ELA every other day.
 - **A different list for each kind of day:** school nights Mon–Fri, and
   tutoring days on Sat/Sun with the right class time for each.
 - **One box per kind of work, in the order of his day:** school homework, the
@@ -74,7 +74,7 @@ better than the last. Some examples:
 - **Rules have to make sense to a 13-year-old.** One shared limit for phone *and*
   reading made no sense to him, so reading got no limit at all. And since he's
   13, he'd tap Break and Back over and over just to tap them, so the app
-  tells him "chill lil kid, lock in."
+  tells him "lock in lil kid."
 - **Homework that piles up.** His tutoring homework is due every Saturday. A
   questions-done counter with an "on pace" line spreads it across the week
   instead of all landing on Friday night.

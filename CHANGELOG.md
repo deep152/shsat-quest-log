@@ -24,7 +24,8 @@ from watching my brother actually use it. Each version's full code is in
 | 16 | Oct 21 | [Test List](versions/2026-10-21-v16-test-list.jsx) |
 | — | Oct 22 | Live site fix |
 | 17 | Oct 22 | [Do these 2 today](versions/2026-10-22-v17-do-these-2.jsx) |
-| 18 | Oct 23 | [Bonus lessons (current)](versions/2026-10-23-v18-bonus-lessons.jsx) |
+| 18 | Oct 23 | [Bonus lessons](versions/2026-10-23-v18-bonus-lessons.jsx) |
+| 19 | Oct 23 | [Math + ELA lanes (current)](versions/2026-10-23-v19-lanes.jsx) |
 
 ---
 
@@ -166,7 +167,7 @@ and a tutor can help decide what he already knows.
 day. He also started with a math tutor 5 days a week, so hard math now has
 somewhere to go. And his test is Nov 18, not Nov 8.
 
-### v18 · Oct 23 · Bonus lessons (current)
+### v18 · Oct 23 · Bonus lessons
 - Once both lessons are done, a ⭐ BONUS card hands him one more lesson at a
   time, math first. Extras stay on the card, crossed off, with undo.
 - The tutor check moved to right after homework.
@@ -175,3 +176,16 @@ somewhere to go. And his test is Nov 18, not Nov 8.
 **Why:** 2 lessons is the minimum, not the limit, and math has about twice as
 many lessons left as ELA. His day goes home → homework → tutor at 4. And a
 YouTube search on his phone is one tap from Shorts.
+
+### v19 · Oct 23 · Math + ELA lanes (current)
+- The card became "Do 2 today" with a Math lane and an ELA lane. Finish a
+  lesson and the next one in that subject shows up right there. Finished ones
+  stay in the lane, crossed off, with undo.
+- The goal is 2 a day with at least 1 math. ELA is every other day: if he did
+  no ELA yesterday, 1 ELA is part of today's 2.
+- Math starts at Ch 11, where his tutor started him. 10.4 Backsolving moved to
+  just before Algebra, where it's used most.
+
+**Why:** after one math lesson, the card sent him to ELA even when he was on a
+roll. Most days should lean math, since it has about twice as many lessons
+left, without ELA stopping. And his tutor started him at Chapter 11.
