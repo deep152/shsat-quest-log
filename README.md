@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 16 versions based on how he actually used it.
+through 17 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -18,6 +18,8 @@ nag him.
 
 ## What it does
 
+- **"Do these 2 today"** at the top of the home screen: one Math lesson and
+  one ELA lesson in big type, each with a big ✓ Done button.
 - **A different list for each kind of day:** school nights Mon–Fri, and
   tutoring days on Sat/Sun with the right class time for each.
 - **One box per kind of work, in the order of his day:** school homework, the
@@ -28,12 +30,13 @@ nag him.
   start / break / stop times, so locking the phone or closing the app never
   loses time.
 - **A Test List** of every lesson left before the test, with page numbers.
-  His weakest topics come first, based on his practice-test results. An "I know
-  it" button lets him skip topics he's already solid on.
+  His weakest topics come first, based on his practice-test results. If a math
+  lesson is too hard, one tap puts it on a list for his math tutor instead of
+  skipping it.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.
 - **A phone-time cap** (2.5 hours max, aim for under 2).
-- **A Post-its tab** explaining his study method step by step.
+- **A How to tab** with his study method in four short steps.
 - **Notes and a backup code,** so questions don't get forgotten and his
   history can move to a new version of the app.
 
@@ -57,8 +60,12 @@ better than the last. Some examples:
 - **A number can motivate or discourage.** I gave every lesson a due date so he'd
   know if he was on track. When he fell behind, the app said "9 behind," and
   that just made it worse. The current version has one list, weak spots first,
-  and says "37 left · about 2 a day" instead. Same information, but something he
-  can actually start on.
+  and says "37 left · 2 a day = done by Nov 9" instead. Same information, but
+  something he can actually start on.
+- **Too many words, too many tabs.** By v16 the home screen had a lot of text and
+  five tabs, and he still had to work out what to do. What he needed was one
+  thing: today's two lessons, in big type, at the top. v17 does that, and cuts a
+  tab and most of the instructions.
 - **His method, not a textbook one.** The first study method in the app was
   strict (always try the practice questions first, review mistakes once a
   week on Sunday). It didn't match how he works. Now he looks at a lesson's topics first and decides, and he

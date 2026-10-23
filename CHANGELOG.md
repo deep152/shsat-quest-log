@@ -21,8 +21,9 @@ from watching my brother actually use it. Each version's full code is in
 | 13 | Oct 17 | [Dated plan + weak-spot tags](versions/2026-10-17-v13-dated-plan-tags.jsx) |
 | 14 | Oct 17 | [Post-its tab + calendar](versions/2026-10-17-v14-postits-calendar.jsx) |
 | 15 | Oct 17 | [Page numbers + Nov 8](versions/2026-10-17-v15-toc-nov8.jsx) |
-| 16 | Oct 21 | [Test List (current)](versions/2026-10-21-v16-test-list.jsx) |
+| 16 | Oct 21 | [Test List](versions/2026-10-21-v16-test-list.jsx) |
 | — | Oct 22 | Live site fix |
+| 17 | Oct 22 | [Do these 2 today (current)](versions/2026-10-22-v17-do-these-2.jsx) |
 
 ---
 
@@ -137,7 +138,7 @@ were turning into finished lessons. And one mis-tap made a lesson disappear.
 **Why:** the table of contents came in, and "always do the practice set first"
 didn't match how he actually works.
 
-### v16 · Oct 21 · Test List (current)
+### v16 · Oct 21 · Test List
 - One list of everything left for the test, weak spots first, no dates.
 - An "I know it" button for topics he's already solid on.
 - "37 left · 18 days to the test · about 2 a day" instead of "behind."
@@ -149,3 +150,17 @@ and a tutor can help decide what he already knows.
 - The GitHub Pages site had gone blank. The page loaded Babel without a version
   number, and that link had moved to Babel 8, which turns JSX into `import`
   statements a plain page can't run. React and Babel are now pinned to exact versions.
+
+### v17 · Oct 22 · Do these 2 today (current)
+- A big "Do these 2 today" card at the top of the Today tab: one Math lesson and
+  one ELA lesson, each with a big ✓ Done button. They stay on the card all day.
+- A 👨‍🏫 Too hard button on math. It puts the lesson on a "For your tutor" list
+  instead of skipping it. It replaced the "I know it" button.
+- School days have a "Tutor 4:00–5:30" check.
+- Test date moved to Nov 18. The pace line says when he'll finish at 2 a day.
+- Cut the Schedule tab and the DO NEXT list. Post-its became a short
+  four-step How to tab.
+
+**Why:** too many words and too many tabs. He needed one clear thing to do each
+day. He also started with a math tutor 5 days a week, so hard math now has
+somewhere to go. And his test is Nov 18, not Nov 8.
