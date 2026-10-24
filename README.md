@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 20 versions based on how he actually used it.
+through 21 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -30,10 +30,11 @@ nag him.
 - **Study timers that keep counting with the screen off.** They save real
   start / break / stop times, so locking the phone or closing the app never
   loses time.
-- **A Test List** of every lesson left before the test, with page numbers.
-  His weakest topics come first, based on his practice-test results. If a
-  lesson is too hard, one tap puts it on a list for his tutor instead of
-  skipping it.
+- **A Test List** of every lesson left before the test, in book order with
+  page numbers, and his weak spots tagged from his practice-test results.
+  "Next" is always the lesson after the furthest one he's done, so it follows
+  his tutor. If a lesson is too hard, one tap puts it on a list for his tutor
+  instead of skipping it.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.
 - **A phone-time cap** (2.5 hours max, aim for under 2).
@@ -60,13 +61,17 @@ better than the last. Some examples:
   side.
 - **A number can motivate or discourage.** I gave every lesson a due date so he'd
   know if he was on track. When he fell behind, the app said "9 behind," and
-  that just made it worse. The current version has one list, weak spots first,
-  and says "37 left · 2 a day = done by Nov 9" instead. Same information, but
-  something he can actually start on.
+  that just made it worse. The current version has one list and says "37 left ·
+  2 a day = done by Nov 9" instead. Same information, but something he can
+  actually start on.
 - **Too many words, too many tabs.** By v16 the home screen had a lot of text and
   five tabs, and he still had to work out what to do. What he needed was one
   thing: today's two lessons, in big type, at the top. v17 does that, and cuts a
   tab and most of the instructions.
+- **The plan has to follow the tutor.** I ordered math by his weak spots, but
+  his tutor started him at Chapter 11 and teaches the book in order, so the app
+  kept pointing him at a lesson he'd already passed. Now "next" is just the
+  lesson after the furthest one he's done, in whatever order he does them.
 - **His method, not a textbook one.** The first study method in the app was
   strict (always try the practice questions first, review mistakes once a
   week on Sunday). It didn't match how he works. Now he looks at a lesson's topics first and decides, and he

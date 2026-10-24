@@ -26,7 +26,8 @@ from watching my brother actually use it. Each version's full code is in
 | 17 | Oct 22 | [Do these 2 today](versions/2026-10-22-v17-do-these-2.jsx) |
 | 18 | Oct 23 | [Bonus lessons](versions/2026-10-23-v18-bonus-lessons.jsx) |
 | 19 | Oct 23 | [Math + ELA lanes](versions/2026-10-23-v19-lanes.jsx) |
-| 20 | Oct 24 | [ELA at home, tutor for what he missed (current)](versions/2026-10-24-v20-ela-at-home.jsx) |
+| 20 | Oct 24 | [ELA at home, tutor for what he missed](versions/2026-10-24-v20-ela-at-home.jsx) |
+| 21 | Oct 24 | [Follows the tutor (current)](versions/2026-10-24-v21-follows-the-tutor.jsx) |
 
 ---
 
@@ -191,7 +192,7 @@ YouTube search on his phone is one tap from Shorts.
 roll. Most days should lean math, since it has about twice as many lessons
 left, without ELA stopping. And his tutor started him at Chapter 11.
 
-### v20 · Oct 24 · ELA at home, tutor for what he missed (current)
+### v20 · Oct 24 · ELA at home, tutor for what he missed
 - ELA lessons get the 👨‍🏫 Too hard button too, on the Today card and the Test
   List. The tutor list shows both subjects, math first.
 - The How to tab now says to read ELA passages at home, mark the ones he got
@@ -200,3 +201,15 @@ left, without ELA stopping. And his tutor started him at Chapter 11.
 **Why:** most of the ELA section is reading passages about a page long, and
 reading them during tutoring used up his tutor's time. Now the reading happens
 at home and the tutor's 90 minutes go to the questions he actually missed.
+
+### v21 · Oct 24 · Follows the tutor (current)
+- Math is in book order from Ch 11, the way his tutor teaches it. 🎯 tags still
+  mark his weak spots.
+- "Next" is now the lesson right after the furthest one he's worked on. If the
+  tutor skips ahead or picks a different lesson, he checks it off and the app
+  picks up right after it. Lessons he skipped stay on the list and come back
+  at the end.
+
+**Why:** his tutor started him at Chapter 11 and goes through the book in
+order, so a weak-spots-first list kept pointing him at a lesson he'd already
+passed. The tutor decides the order now, and the app keeps up.

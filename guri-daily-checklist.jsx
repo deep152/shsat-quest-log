@@ -903,13 +903,15 @@ function DayDetail({ k, info, todayKey }) {
   );
 }
 
-// ---- the Test List (updated Oct 23) --------------------------------------
-// Everything left for the test, one list per subject. No dates - he works top
-// to bottom, and the first unchecked item is NEXT. Math is in priority order:
-// weak spots first, so if time runs out, what's left is the least important.
-// ELA stays in book order because the reading lessons build on each other.
-// Math starts at Ch 11 (Arithmetic), where his tutor started him: it's the base
-// for algebra and word problems, and his practice tests were weakest there.
+// ---- the Test List (updated Oct 24) --------------------------------------
+// Everything left for the test, one list per subject, in book order. Math
+// starts at Ch 11 (Arithmetic), where his tutor started him, and follows the
+// book the way the tutor teaches it. 🎯 tags still mark his weak spots from
+// his practice tests. ELA is in book order because the lessons build on each
+// other.
+//
+// NEXT is the first open lesson after the furthest one he's worked on (see
+// nextIn), so if his tutor skips ahead or picks something else, the app follows.
 //
 // Nothing is skipped. He does each lesson's Perform set (the last ~2 pages):
 // easy = done, hard = 👨‍🏫 sent to his tutor (Mon-Fri 4:00-5:30). ELA passages
@@ -928,35 +930,34 @@ const KAPLAN_PLAN = {
     { id: "m1",  lesson: "Lesson 10.1", page: "page 300", text: "Basic terms & translation." },
     { id: "m2",  lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform just before page 315." },
     { id: "m3",  lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform just before page 320." },
-    // weak spots first
-    { id: "m5",  group: "weak", lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform just before page 334.", tag: "focus" },
-    { id: "m6",  group: "weak", lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform just before page 343.", tag: "focus" },
-    { id: "m9",  group: "weak", lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform just before page 360.", tag: "focus" },
+    // Ch 11 onward, in book order - the order his tutor teaches it
+    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform just before page 334.", tag: "focus" },
+    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform just before page 343.", tag: "focus" },
+    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform just before page 350.", tag: "strong" },
+    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform just before page 356." },
+    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform just before page 360.", tag: "focus" },
+    { id: "m10", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform just before page 367." },
+    { id: "m11", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform just before page 374." },
+    { id: "m12", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform just before page 381." },
     // Backsolving is a test trick (plug in the answer choices) used most on
     // equations, so it goes right before Algebra.
-    { id: "m4",  group: "weak", lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
-    { id: "m13", group: "weak", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform just before page 388.", tag: "focus" },
-    { id: "m14", group: "weak", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform just before page 396.", tag: "focus" },
-    { id: "m15", group: "weak", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform just before page 403.", tag: "focus" },
-    { id: "m16", group: "weak", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform just before page 464.", tag: "focus" },
-    { id: "m17", group: "weak", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform just before page 450.", tag: "focus" },
-    // everything else
-    { id: "m7",  group: "rest", lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform just before page 350.", tag: "strong" },
-    { id: "m8",  group: "rest", lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform just before page 356." },
-    { id: "m10", group: "rest", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform just before page 367." },
-    { id: "m11", group: "rest", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform just before page 374." },
-    { id: "m12", group: "rest", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform just before page 381." },
-    { id: "m18", group: "rest", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform just before page 416." },
-    { id: "m19", group: "rest", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform just before page 426." },
-    { id: "m20", group: "rest", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform just before page 436." },
-    { id: "m21", group: "rest", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform just before page 441." },
-    { id: "m23", group: "rest", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform just before page 456." },
-    { id: "m22", group: "rest", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform just before page 471." },
-    { id: "m27", group: "rest", lesson: "Lesson 15.1", page: "page 472", text: "Charts. Perform just before page 479." },
-    { id: "m28", group: "rest", lesson: "Lesson 15.2", page: "page 479", text: "Data tables. Perform just before page 487." },
-    { id: "m24", group: "rest", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform just before page 491." },
-    { id: "m25", group: "rest", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Check each set before starting the next." },
-    { id: "m26", group: "rest", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
+    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
+    { id: "m13", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform just before page 388.", tag: "focus" },
+    { id: "m14", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform just before page 396.", tag: "focus" },
+    { id: "m15", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform just before page 403.", tag: "focus" },
+    { id: "m18", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform just before page 416." },
+    { id: "m19", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform just before page 426." },
+    { id: "m20", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform just before page 436." },
+    { id: "m21", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform just before page 441." },
+    { id: "m17", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform just before page 450.", tag: "focus" },
+    { id: "m23", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform just before page 456." },
+    { id: "m16", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform just before page 464.", tag: "focus" },
+    { id: "m22", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform just before page 471." },
+    { id: "m27", lesson: "Lesson 15.1", page: "page 472", text: "Charts. Perform just before page 479." },
+    { id: "m28", lesson: "Lesson 15.2", page: "page 479", text: "Data tables. Perform just before page 487." },
+    { id: "m24", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform just before page 491." },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Check each set before starting the next." },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
   ],
   ela: [
     { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before.", tag: "focus" },
@@ -1060,12 +1061,23 @@ function RemainingLine({ weekDone, todayKey }) {
   );
 }
 
+// What's next in one subject: the first open lesson after the furthest one he
+// has worked on (done or sent to the tutor). It follows his tutor instead of a
+// fixed order: check off 11.6 and next is 11.7, even if 11.4 is still open.
+// Old "I know it" skips don't move it. When nothing is open after that point,
+// it goes back to the first open lesson he skipped.
+function nextIn(items, weekDone) {
+  let last = -1;
+  items.forEach((i, k) => { const v = weekDone[i.id]; if (v && !isKnown(v)) last = k; });
+  return items.slice(last + 1).find((i) => !weekDone[i.id]) || items.find((i) => !weekDone[i.id]) || null;
+}
+
 // ---- TEST LIST tab ---------------------------------------------------
 // Everything left for the test. Done items stay crossed off. Math that's too
 // hard gets sent to the tutor's list instead of being skipped.
 function TestListTab({ weekDone, toggleWeek, todayKey }) {
   const List = ({ title, items }) => {
-    const next = items.find((i) => !weekDone[i.id]);
+    const next = nextIn(items, weekDone);
     const count = items.filter((i) => isDone(weekDone[i.id])).length;
     return (
       <div style={{ marginTop: 16 }}>
@@ -1089,8 +1101,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
       </p>
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} />
-      <List title="📐 Math — 🎯 weak spots first" items={m.filter((i) => i.group !== "rest")} />
-      <List title="📐 Math — everything else" items={m.filter((i) => i.group === "rest")} />
+      <List title="📐 Math" items={m} />
       <List title="📖 ELA" items={KAPLAN_PLAN.ela} />
     </div>
   );
@@ -1113,7 +1124,7 @@ function TutorList({ weekDone }) {
 
 // ---- TODAY'S LESSONS ---------------------------------------------------
 // The first thing on the Today tab. A Math lane on top and an ELA lane under it.
-// Each lane shows the next lesson in that subject, and when he finishes one the
+// Each lane shows the next lesson in that subject (nextIn), and when he finishes one the
 // next one shows up right there, so he can do 3 math in a row if he's on a roll.
 // Lessons he handled today stay in the lane, crossed off, with undo.
 //
@@ -1125,8 +1136,8 @@ function TodayCard({ weekDone, toggleWeek, todayKey }) {
   const m = KAPLAN_PLAN.math, e = KAPLAN_PLAN.ela;
   const mToday = m.filter((i) => handledOn(i, todayKey));
   const eToday = e.filter((i) => handledOn(i, todayKey));
-  const mNext = m.find((i) => !weekDone[i.id]);
-  const eNext = e.find((i) => !weekDone[i.id]);
+  const mNext = nextIn(m, weekDone);
+  const eNext = nextIn(e, weekDone);
   const elaDue = !e.some((i) => handledOn(i, addDays(todayKey, -1))) && (eToday.length > 0 || !!eNext);
   const count = mToday.length + eToday.length;
   const needMath = mToday.length === 0 && !!mNext;
