@@ -74,7 +74,7 @@ const C = {
   schoolhw: { id: "schoolhw", title: "Homework done",          desc: "Whatever's due tomorrow." },
   schoolmon:{ id: "schoolhw", title: "Homework for Monday done", desc: "Get it out of the way." },
   checked:  { id: "checked",  title: "Checked my answers",     desc: "Wrong ones got a post-it." },
-  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Math. Bring your 👨‍🏫 list." },
+  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Bring your 👨‍🏫 list and the book." },
   postit:   { id: "postit",   title: "Post-its still left",    desc: "Redo them. Got it? Take it off." },
   kindle:   { id: "kindle",   title: "Kindle 1hr+",            desc: "No cap on this one." },
   dinner:   { id: "dinner",   title: "Dinner",                 desc: "Whenever it's ready." },
@@ -742,12 +742,12 @@ function PostItsTab() {
       <SectionLabel text="HOW TO DO A LESSON" />
       <Step n="1" title="Do the Perform set">
         Last ~2 pages of the lesson. Check it in the back.
+        <div style={{ marginTop: 4 }}><b>ELA:</b> always read the passages at home, not at the tutor.</div>
         <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>Math p.{MATH_ANSWERS_PAGE} · ELA p.{ELA_ANSWERS_PAGE}</div>
       </Step>
       <Step n="2" title="Easy? ✓ Done">Got it right without guessing? Tap ✓ and move on.</Step>
       <Step n="3" title="Hard?">
-        <b>Math:</b> tap 👨‍🏫 Too hard. Your tutor goes over it 4–5:30.
-        <div style={{ marginTop: 4 }}><b>ELA:</b> do the lesson, then the Perform set again.</div>
+        Mark the ones you got wrong, then tap 👨‍🏫 Too hard. Your tutor goes over just those, 4–5:30.
       </Step>
       <Step n="4" title="Wrong answers → post-its">
         Post-it with why you missed it. Redo your post-its at the end of the day.
@@ -946,7 +946,8 @@ function DayDetail({ k, info, todayKey }) {
 // for algebra and word problems, and his practice tests were weakest there.
 //
 // Nothing is skipped. He does each lesson's Perform set (the last ~2 pages):
-// easy = done, hard math = 👨‍🏫 sent to his math tutor (Mon-Fri 4:00-5:30).
+// easy = done, hard = 👨‍🏫 sent to his tutor (Mon-Fri 4:00-5:30). ELA passages
+// are long, so he reads them at home and the tutor only goes over what he missed.
 // Pages from the table of contents.
 //
 // Saved values (in weekDone): "2026-10-21" = done that day, "tutor:2026-10-23" =
@@ -1031,7 +1032,7 @@ function daysUntil(fromKey, toKey) {
   return Math.max(0, Math.round((toDate(toKey) - toDate(fromKey)) / 86400000));
 }
 // One row of the list. Math rows get a 👨‍🏫 Tutor button when showTutor is set.
-function PlanRow({ i, toggleWeek, value, isNext, isMath, showTutor }) {
+function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
   const on = isDone(value);
   const tutor = isTutor(value);
   const known = isKnown(value);
@@ -1059,7 +1060,7 @@ function PlanRow({ i, toggleWeek, value, isNext, isMath, showTutor }) {
           {on && <span style={{ ...S.mono, fontSize: 9, color: "#3A4356", whiteSpace: "nowrap" }}>{known ? "knew it" : "done"}{day ? ` ${shortDate(day)}` : ""}</span>}
         </span>
       </button>
-      {showTutor && isMath && !on && !tutor && (
+      {showTutor && !on && !tutor && (
         <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`} style={S.tutorBtn}>👨‍🏫<br />Too hard</button>
       )}
       {showTutor && tutor && (
@@ -1097,7 +1098,7 @@ function RemainingLine({ weekDone, todayKey }) {
 // Everything left for the test. Done items stay crossed off. Math that's too
 // hard gets sent to the tutor's list instead of being skipped.
 function TestListTab({ weekDone, toggleWeek, todayKey }) {
-  const List = ({ title, items, isMath }) => {
+  const List = ({ title, items }) => {
     const next = items.find((i) => !weekDone[i.id]);
     const count = items.filter((i) => isDone(weekDone[i.id])).length;
     return (
@@ -1108,7 +1109,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
         </div>
         {items.map((i) => (
           <PlanRow key={i.id} i={i} value={weekDone[i.id]} isNext={next && next.id === i.id}
-            toggleWeek={toggleWeek} isMath={isMath} showTutor />
+            toggleWeek={toggleWeek} showTutor />
         ))}
       </div>
     );
@@ -1118,24 +1119,28 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
     <div style={{ padding: "4px 16px 4px" }}>
       <SectionLabel text={`EVERYTHING FOR THE TEST · ${shortDate(TEST_DATE).toUpperCase()}`} />
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 0" }}>
-        Do the Perform set. Easy → <b>✓</b>. Hard math → <b>👨‍🏫 Too hard</b>.
+        Do the Perform set. Easy → <b>✓</b>. Hard → <b>👨‍🏫 Too hard</b>.
       </p>
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} />
-      <List title="📐 Math — 🎯 weak spots first" items={m.filter((i) => i.group !== "rest")} isMath />
-      <List title="📐 Math — everything else" items={m.filter((i) => i.group === "rest")} isMath />
+      <List title="📐 Math — 🎯 weak spots first" items={m.filter((i) => i.group !== "rest")} />
+      <List title="📐 Math — everything else" items={m.filter((i) => i.group === "rest")} />
       <List title="📖 ELA" items={KAPLAN_PLAN.ela} />
     </div>
   );
 }
 
-// The math he saved for the tutor, as one short line.
+// What he saved for the tutor, as one short line: math first, then ELA.
 function TutorList({ weekDone }) {
-  const list = KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id]));
+  const short = (i) => i.lesson.replace("Lesson ", "");
+  const list = [
+    ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => `📐 ${short(i)}`),
+    ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => `📖 ${short(i)}`),
+  ];
   if (list.length === 0) return null;
   return (
     <div style={S.tutorBox}>
-      👨‍🏫 <b>For your tutor:</b> {list.map((i) => i.lesson.replace("Lesson ", "")).join(", ")}
+      👨‍🏫 <b>For your tutor:</b> {list.join(", ")}
     </div>
   );
 }
@@ -1207,14 +1212,14 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek }) {
           </div>
         );
       })}
-      {next ? <HeroTask i={next} isMath={isMath} toggleWeek={toggleWeek} />
+      {next ? <HeroTask i={next} toggleWeek={toggleWeek} />
             : <div style={{ ...S.body, fontSize: 13, color: "#6FE3B4", margin: "6px 2px 0" }}>All {isMath ? "math" : "ELA"} done ✓</div>}
     </div>
   );
 }
 
-// The next lesson in a lane: big name, page, ✓ DONE, and 👨‍🏫 Too hard for math.
-function HeroTask({ i, isMath, toggleWeek }) {
+// The next lesson in a lane: big name, page, ✓ DONE, and 👨‍🏫 Too hard.
+function HeroTask({ i, toggleWeek }) {
   return (
     <div style={{ ...S.heroTask, marginTop: 6 }}>
       {i.tag && <div style={{ ...S.mono, fontSize: 10, color: TAGS[i.tag].color }}>{TAGS[i.tag].label}</div>}
@@ -1223,7 +1228,7 @@ function HeroTask({ i, isMath, toggleWeek }) {
       <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ DONE</button>
-        {isMath && (
+        {(
           <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
             style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
             👨‍🏫 Too hard

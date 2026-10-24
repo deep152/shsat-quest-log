@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 19 versions based on how he actually used it.
+through 20 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -31,8 +31,8 @@ nag him.
   start / break / stop times, so locking the phone or closing the app never
   loses time.
 - **A Test List** of every lesson left before the test, with page numbers.
-  His weakest topics come first, based on his practice-test results. If a math
-  lesson is too hard, one tap puts it on a list for his math tutor instead of
+  His weakest topics come first, based on his practice-test results. If a
+  lesson is too hard, one tap puts it on a list for his tutor instead of
   skipping it.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.

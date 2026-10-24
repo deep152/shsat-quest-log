@@ -25,7 +25,8 @@ from watching my brother actually use it. Each version's full code is in
 | — | Oct 22 | Live site fix |
 | 17 | Oct 22 | [Do these 2 today](versions/2026-10-22-v17-do-these-2.jsx) |
 | 18 | Oct 23 | [Bonus lessons](versions/2026-10-23-v18-bonus-lessons.jsx) |
-| 19 | Oct 23 | [Math + ELA lanes (current)](versions/2026-10-23-v19-lanes.jsx) |
+| 19 | Oct 23 | [Math + ELA lanes](versions/2026-10-23-v19-lanes.jsx) |
+| 20 | Oct 24 | [ELA at home, tutor for what he missed (current)](versions/2026-10-24-v20-ela-at-home.jsx) |
 
 ---
 
@@ -177,7 +178,7 @@ somewhere to go. And his test is Nov 18, not Nov 8.
 many lessons left as ELA. His day goes home → homework → tutor at 4. And a
 YouTube search on his phone is one tap from Shorts.
 
-### v19 · Oct 23 · Math + ELA lanes (current)
+### v19 · Oct 23 · Math + ELA lanes
 - The card became "Do 2 today" with a Math lane and an ELA lane. Finish a
   lesson and the next one in that subject shows up right there. Finished ones
   stay in the lane, crossed off, with undo.
@@ -189,3 +190,13 @@ YouTube search on his phone is one tap from Shorts.
 **Why:** after one math lesson, the card sent him to ELA even when he was on a
 roll. Most days should lean math, since it has about twice as many lessons
 left, without ELA stopping. And his tutor started him at Chapter 11.
+
+### v20 · Oct 24 · ELA at home, tutor for what he missed (current)
+- ELA lessons get the 👨‍🏫 Too hard button too, on the Today card and the Test
+  List. The tutor list shows both subjects, math first.
+- The How to tab now says to read ELA passages at home, mark the ones he got
+  wrong, and bring just those to the tutor.
+
+**Why:** most of the ELA section is reading passages about a page long, and
+reading them during tutoring used up his tutor's time. Now the reading happens
+at home and the tutor's 90 minutes go to the questions he actually missed.

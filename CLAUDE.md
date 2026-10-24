@@ -23,7 +23,7 @@ on his phone every day, so **never break his saved progress**.
    is saved. Renaming one silently wipes his history. New things get new ids.
 2. **Old saved data has to keep working.** Example: checks used to be saved as
    `true` and are now saved as a date. Both still count as done. A lesson can
-   also be `tutor:<date>` (sent to his math tutor, not done yet) or
+   also be `tutor:<date>` (sent to his tutor, not done yet) or
    `know:<date>` (an old "I know it" skip, counts as done).
 3. **Keep it one file.** React hooks only, inline style objects, no new
    libraries, no build step.
