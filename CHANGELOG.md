@@ -29,7 +29,8 @@ from watching my brother actually use it. Each version's full code is in
 | 20 | Oct 24 | [ELA at home, tutor for what he missed](versions/2026-10-24-v20-ela-at-home.jsx) |
 | 21 | Oct 24 | [Follows the tutor](versions/2026-10-24-v21-follows-the-tutor.jsx) |
 | 22 | Oct 24 | [Progress reports](versions/2026-10-24-v22-progress-reports.jsx) |
-| 23 | Oct 24 | [Topics and the 4-of-5 rule (current)](versions/2026-10-24-v23-topics.jsx) |
+| 23 | Oct 24 | [Topics and the 4-of-5 rule](versions/2026-10-24-v23-topics.jsx) |
+| 24 | Oct 24 | [His steps + Notes tab (current)](versions/2026-10-24-v24-steps-and-notes.jsx) |
 
 ---
 
@@ -229,7 +230,7 @@ passed. The tutor decides the order now, and the app keeps up.
 **Why:** checking on his progress meant asking him. Now it comes to me as he
 works, and nothing changes for him.
 
-### v23 · Oct 24 · Topics and the 4-of-5 rule (current)
+### v23 · Oct 24 · Topics and the 4-of-5 rule
 - Every lesson shows its topic from the book, like "Fractions & Decimals" or
   "Organization & Topic Development", on the Today card and the Test List.
 - The Today card shows what to type into YouTube if he's stuck, as plain
@@ -241,3 +242,21 @@ works, and nothing changes for him.
 **Why:** "Lesson 4.6" and "Skip the reading" didn't tell him what the lesson
 was about, and "easy?" was a judgment call he couldn't make. The jump from
 4.3 to 4.6 also looked like lessons were missing.
+
+### v24 · Oct 24 · His steps + Notes tab (current)
+- Every lesson card lists the steps I gave him, in plain words. Math: go
+  through the lesson, do the Perform set, circle wrong ones and ask the tutor.
+  ELA: read the lesson till he gets it, do the topic test at the end,
+  highlight wrong ones and ask the tutor.
+- The buttons are now **✓ All right** and **👨‍🏫 Ask tutor**. After Ask
+  tutor, a box asks what was hard ("#3, #7").
+- A **Notes** tab replaces How to. What he writes shows up there as a to-do
+  for the tutor ("Guri said this is hard: …") until it's checked off. His
+  other notes moved there from the bottom of the page.
+- His notes go to the progress Sheet and email me too.
+- Took out the YouTube search words and the 4-of-5 rule from v23.
+- Added Lesson 4.7, which he's on now.
+
+**Why:** the YouTube results weren't useful, and the rule was mine, not his
+method. What helps is knowing exactly which questions he missed, so the tutor
+can start there.

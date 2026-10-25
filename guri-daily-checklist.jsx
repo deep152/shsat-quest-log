@@ -40,7 +40,7 @@ const C = {
   schoolhw: { id: "schoolhw", title: "Homework done",          desc: "Whatever's due tomorrow." },
   schoolmon:{ id: "schoolhw", title: "Homework for Monday done", desc: "Get it out of the way." },
   checked:  { id: "checked",  title: "Checked my answers",     desc: "Wrong ones got a post-it." },
-  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Bring your 👨‍🏫 list and the book." },
+  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Bring the book and your 👨‍🏫 notes." },
   postit:   { id: "postit",   title: "Post-its still left",    desc: "Redo them. Got it? Take it off." },
   kindle:   { id: "kindle",   title: "Kindle 1hr+",            desc: "No cap on this one." },
   dinner:   { id: "dinner",   title: "Dinner",                 desc: "Whenever it's ready." },
@@ -172,8 +172,6 @@ export default function GuriQuestLog() {
   const [restoreInput, setRestoreInput] = useState("");
   const [restoreMsg, setRestoreMsg] = useState("");
   const [notes, setNotes] = useState([]);
-  const [noteInput, setNoteInput] = useState("");
-  const [showNotes, setShowNotes] = useState(false);
 
   const today = new Date();
   const dayIdx = today.getDay();
@@ -241,11 +239,11 @@ export default function GuriQuestLog() {
   // Skipped when nothing changed since the last one.
   useEffect(() => {
     if (!loaded || !REPORT_URL) return;
-    syncReport(weekDone, dateKey, times);
-    const onHide = () => { if (document.visibilityState === "hidden") syncReport(weekDone, dateKey, times); };
+    syncReport(weekDone, dateKey, times, notes);
+    const onHide = () => { if (document.visibilityState === "hidden") syncReport(weekDone, dateKey, times, notes); };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [loaded, weekDone, times, dateKey]);
+  }, [loaded, weekDone, times, dateKey, notes]);
 
   // keep the calendar's cleared-days list in sync. An effect instead of a click
   // handler because the Kaplan goal can get hit just by time passing.
@@ -304,8 +302,8 @@ export default function GuriQuestLog() {
     else if (mode === "undo") delete next[id];
     else if (cur && !isTutor(cur)) delete next[id];        // tap a done one again = undo
     else next[id] = dateKey;                               // tap an open or tutor one = done
-    const item = [...KAPLAN_PLAN.math.map((i) => ({ ...i, subj: "Math" })), ...KAPLAN_PLAN.ela.map((i) => ({ ...i, subj: "ELA" }))].find((i) => i.id === id);
-    if (item) lessonReport({ action: mode === "tutor" ? "tutor" : next[id] ? "done" : "undo", subj: item.subj, lesson: item.lesson }, next, dateKey, times);
+    const item = lessonById(id);
+    if (item) lessonReport({ action: mode === "tutor" ? "tutor" : next[id] ? "done" : "undo", subj: item.subj, lesson: item.lesson }, next, dateKey, times, notes);
     setWeekDone(next);
     try { await window.storage.set(`guri-kaplanweek:${KAPLAN_PLAN.id}`, JSON.stringify(next)); } catch (e) {}
   }
@@ -331,14 +329,20 @@ export default function GuriQuestLog() {
     setNotes(next);
     try { await window.storage.set("guri-notes", JSON.stringify(next)); } catch (e) {}
   }
-  function addNote() {
-    const text = noteInput.trim();
-    if (!text) return;
+  // A note is either about a lesson (lessonId set: "Guri said this is hard",
+  // shown as a to-do for the tutor until it's checked off) or about anything.
+  // Old notes are { id, stamp, text } and still show, under "Other notes".
+  function addNote(text, lessonId) {
+    const t = text.trim();
+    if (!t) return;
     const d = new Date();
     const stamp = `${DAY_NAMES[d.getDay()].slice(0, 3)} ${d.getMonth() + 1}/${d.getDate()}`;
-    saveNotes([{ id: Date.now(), stamp, text }, ...notes]);
-    setNoteInput("");
+    const next = [{ id: Date.now(), stamp, text: t, ...(lessonId ? { lessonId } : {}) }, ...notes];
+    saveNotes(next);
+    const item = lessonById(lessonId);
+    if (item) noteReport({ action: "note", subj: item.subj, lesson: item.lesson, text: t }, weekDone, dateKey, times, next);
   }
+  function toggleNoteDone(id) { saveNotes(notes.map((n) => (n.id === id ? { ...n, done: !n.done } : n))); }
   function deleteNote(id) { saveNotes(notes.filter((n) => n.id !== id)); }
 
   async function restoreFromCode() {
@@ -370,13 +374,12 @@ export default function GuriQuestLog() {
       <TabBar tab={tab} setTab={setTab} />
 
       {tab === "today" && (
-        <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
+        <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
-      {tab === "todo" && <TestListTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} />}
-      {tab === "guide" && <PostItsTab />}
+      {tab === "todo" && <TestListTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} notes={notes} />}
+      {tab === "notes" && <NotesTab {...{ notes, addNote, toggleNoteDone, deleteNote }} />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
 
-      <NotesPanel {...{ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }} />
       <BackupPanel {...{ completedDates, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
       <Footer />
     </div>
@@ -388,7 +391,7 @@ function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
     { id: "todo", label: "Test List" },
-    { id: "guide", label: "How to" },
+    { id: "notes", label: "Notes" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -702,45 +705,6 @@ function TimeLog({ times }) {
   );
 }
 
-// ---- HOW TO tab ------------------------------------------------------
-// The whole method in four steps. Kept short on purpose.
-function PostItsTab() {
-  const Step = ({ n, title, children }) => (
-    <div style={S.guideCard}>
-      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <div style={S.guideNum}>{n}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...S.display, fontSize: 16, color: "#E8ECF4" }}>{title}</div>
-          <div style={{ ...S.body, fontSize: 13, color: "#B8C2D4", margin: "5px 0 0", lineHeight: 1.6 }}>{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-  return (
-    <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text="HOW TO DO A LESSON" />
-      <Step n="1" title="Do the Perform set">
-        Last ~2 pages of the lesson. Check it in the back.
-        <div style={{ marginTop: 4 }}><b>ELA:</b> always read the passages at home, not at the tutor.</div>
-        <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>Math p.{MATH_ANSWERS_PAGE} · ELA p.{ELA_ANSWERS_PAGE}</div>
-      </Step>
-      <Step n="2" title="Easy? ✓ Done">Easy means you got at least 4 out of every 5 right, without guessing. Tap ✓ and move on.</Step>
-      <Step n="3" title="Hard?">
-        Fewer than 4 out of 5? Mark the ones you got wrong, then tap 👨‍🏫 Too hard. Your tutor goes over just those, 4–5:30.
-      </Step>
-      <Step n="4" title="Wrong answers → post-its">
-        Post-it with why you missed it. Redo your post-its at the end of the day.
-      </Step>
-      <div style={{ ...S.restRule, margin: "14px 0 4px" }}>
-        <span style={{ ...S.mono, color: "#F2C14E", fontSize: 12, letterSpacing: 1 }}>⏱ 20-MINUTE RULE</span>
-        <p style={{ ...S.body, color: "#C9D2E0", margin: "6px 0 0", fontSize: 13, lineHeight: 1.55 }}>
-          Stuck 20 minutes on one question? Stop. Post-it it, move on.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ---- CALENDAR tab -----------------------------------------------------
 // Each day shows Kaplan time and how many items got checked off that day.
 // Tap a day to see what got done.
@@ -929,9 +893,7 @@ function DayDetail({ k, info, todayKey }) {
 // Nothing is skipped. He does each lesson's Perform set (the last ~2 pages):
 // easy = done, hard = 👨‍🏫 sent to his tutor (Mon-Fri 4:00-5:30). ELA passages
 // are long, so he reads them at home and the tutor only goes over what he missed.
-// Pages and topic names from the table of contents. yt = what to type into
-// YouTube if he's stuck (shown as text, not a link, so it's one search and
-// not a feed).
+// Pages and topic names from the table of contents.
 //
 // Saved values (in weekDone): "2026-10-21" = done that day, "tutor:2026-10-23" =
 // too hard, saved for the tutor, "know:..." = an old "I know it" skip (counts
@@ -942,53 +904,54 @@ const KAPLAN_PLAN = {
   id: "2026-10-12", // storage key - keep the same so old checks carry over
   math: [
     // already done
-    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", yt: "SHSAT translating words into math", text: "Done." },
-    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", topic: "Order of Operations, Number Properties, Variables", yt: "order of operations number properties", text: "Perform just before page 315." },
-    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", topic: "Picking Numbers", yt: "SHSAT picking numbers strategy", text: "Perform just before page 320." },
+    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", text: "Done." },
+    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", topic: "Order of Operations, Number Properties, Variables", text: "Perform just before page 315." },
+    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", topic: "Picking Numbers", text: "Perform just before page 320." },
     // Ch 11 onward, in book order - the order his tutor teaches it
-    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", topic: "Fractions & Decimals", yt: "SHSAT fractions and decimals", text: "Perform just before page 334.", tag: "focus" },
-    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", topic: "Rounding, Number Lines, Absolute Value, Factors, Multiples", yt: "factors multiples GCF LCM number line", text: "Perform just before page 343.", tag: "focus" },
-    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", topic: "Percents", yt: "SHSAT percent problems", text: "Perform just before page 350.", tag: "strong" },
-    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", topic: "Statistics Terms", yt: "mean median mode range", text: "Perform just before page 356." },
-    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", topic: "Rates", yt: "rate problems distance rate time", text: "Perform just before page 360.", tag: "focus" },
-    { id: "m10", lesson: "Lesson 11.6", page: "page 360", topic: "Ratios & Proportions", yt: "SHSAT ratios and proportions", text: "Perform just before page 367." },
-    { id: "m11", lesson: "Lesson 11.7", page: "page 367", topic: "Coordinate Plane", yt: "coordinate plane 8th grade math", text: "Perform just before page 374." },
-    { id: "m12", lesson: "Lesson 11.8", page: "page 374", topic: "Probability, Combinations, Permutations", yt: "SHSAT probability combinations permutations", text: "Perform just before page 381." },
+    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", topic: "Fractions & Decimals", text: "Perform just before page 334.", tag: "focus" },
+    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", topic: "Rounding, Number Lines, Absolute Value, Factors, Multiples", text: "Perform just before page 343.", tag: "focus" },
+    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", topic: "Percents", text: "Perform just before page 350.", tag: "strong" },
+    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", topic: "Statistics Terms", text: "Perform just before page 356." },
+    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", topic: "Rates", text: "Perform just before page 360.", tag: "focus" },
+    { id: "m10", lesson: "Lesson 11.6", page: "page 360", topic: "Ratios & Proportions", text: "Perform just before page 367." },
+    { id: "m11", lesson: "Lesson 11.7", page: "page 367", topic: "Coordinate Plane", text: "Perform just before page 374." },
+    { id: "m12", lesson: "Lesson 11.8", page: "page 374", topic: "Probability, Combinations, Permutations", text: "Perform just before page 381." },
     // Backsolving is a test trick (plug in the answer choices) used most on
     // equations, so it goes right before Algebra.
-    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", topic: "Backsolving", yt: "SHSAT backsolving", text: "Perform just before page 325.", tag: "focus" },
-    { id: "m13", lesson: "Lesson 12.1", page: "page 382", topic: "Expressions & Equations, One Variable", yt: "solving one variable equations SHSAT", text: "Perform just before page 388.", tag: "focus" },
-    { id: "m14", lesson: "Lesson 12.2", page: "page 388", topic: "Two Variables", yt: "solving equations with two variables", text: "Perform just before page 396.", tag: "focus" },
-    { id: "m15", lesson: "Lesson 12.3", page: "page 396", topic: "Inequalities", yt: "solving inequalities 8th grade", text: "Perform just before page 403.", tag: "focus" },
-    { id: "m18", lesson: "Lesson 13.1", page: "page 404", topic: "Lines & Angles", yt: "lines and angles geometry 8th grade", text: "Perform just before page 416." },
-    { id: "m19", lesson: "Lesson 13.2", page: "page 416", topic: "Perimeter & Area", yt: "SHSAT perimeter and area", text: "Perform just before page 426." },
-    { id: "m20", lesson: "Lesson 13.3", page: "page 426", topic: "Geometric Figures", yt: "SHSAT geometry triangles circles", text: "Perform just before page 436." },
-    { id: "m21", lesson: "Lesson 13.4", page: "page 436", topic: "3-D Shapes", yt: "volume and surface area 3D shapes", text: "Perform just before page 441." },
-    { id: "m17", lesson: "Lesson 14.1", page: "page 442", topic: "Word Problems: Arithmetic", yt: "SHSAT arithmetic word problems", text: "Perform just before page 450.", tag: "focus" },
-    { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", yt: "SHSAT probability word problems", text: "Perform just before page 456." },
-    { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", yt: "SHSAT algebra word problems", text: "Perform just before page 464.", tag: "focus" },
-    { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", yt: "SHSAT geometry word problems", text: "Perform just before page 471." },
-    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", yt: "reading charts and graphs SHSAT", text: "Perform just before page 479." },
-    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", yt: "SHSAT data tables", text: "Perform just before page 487." },
-    { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", yt: "two way tables 8th grade math", text: "Perform just before page 491." },
-    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", yt: "SHSAT math practice questions", text: "Check each set before starting the next." },
-    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", yt: "SHSAT math review", text: "Answers start page 751." },
+    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", topic: "Backsolving", text: "Perform just before page 325.", tag: "focus" },
+    { id: "m13", lesson: "Lesson 12.1", page: "page 382", topic: "Expressions & Equations, One Variable", text: "Perform just before page 388.", tag: "focus" },
+    { id: "m14", lesson: "Lesson 12.2", page: "page 388", topic: "Two Variables", text: "Perform just before page 396.", tag: "focus" },
+    { id: "m15", lesson: "Lesson 12.3", page: "page 396", topic: "Inequalities", text: "Perform just before page 403.", tag: "focus" },
+    { id: "m18", lesson: "Lesson 13.1", page: "page 404", topic: "Lines & Angles", text: "Perform just before page 416." },
+    { id: "m19", lesson: "Lesson 13.2", page: "page 416", topic: "Perimeter & Area", text: "Perform just before page 426." },
+    { id: "m20", lesson: "Lesson 13.3", page: "page 426", topic: "Geometric Figures", text: "Perform just before page 436." },
+    { id: "m21", lesson: "Lesson 13.4", page: "page 436", topic: "3-D Shapes", text: "Perform just before page 441." },
+    { id: "m17", lesson: "Lesson 14.1", page: "page 442", topic: "Word Problems: Arithmetic", text: "Perform just before page 450.", tag: "focus" },
+    { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", text: "Perform just before page 456." },
+    { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", text: "Perform just before page 464.", tag: "focus" },
+    { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", text: "Perform just before page 471." },
+    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479." },
+    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487." },
+    { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", text: "Perform just before page 491." },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next." },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751." },
   ],
   ela: [
-    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", yt: "misplaced modifiers run on sentences", text: "Redo only the questions you got wrong before.", tag: "focus" },
-    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", yt: "subject verb agreement pronoun agreement", text: "Redo only your wrong ones.", tag: "focus" },
-    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", yt: "SHSAT revising editing organization", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
-    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", yt: "how to annotate a reading passage", text: "Do the full lesson." },
-    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", yt: "SHSAT reading comprehension strategy", text: "Do the full lesson." },
-    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", yt: "SHSAT reading question types", text: "Do the full lesson." },
-    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", topic: "Elimination Strategies", yt: "process of elimination reading comprehension", text: "Do the full lesson." },
-    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", yt: "SHSAT fiction passage", text: "Do the full lesson." },
-    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", yt: "how to answer poetry questions", text: "Do the full lesson." },
-    { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", yt: "SHSAT science passage reading", text: "Do the full lesson." },
-    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", yt: "SHSAT reading question types", text: "Do the full lesson." },
-    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", yt: "SHSAT reading elimination strategy", text: "Do the full lesson." },
-    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", yt: "SHSAT ELA review", text: "Answers start page 751." },
-    { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", yt: "SHSAT test day tips", text: "Short. Read it the day before the test." },
+    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus" },
+    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus" },
+    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong" },
+    { id: "e16", lesson: "Lesson 4.7", topic: "Revising & Editing", text: "" },
+    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", text: "" },
+    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", text: "" },
+    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", text: "" },
+    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", topic: "Elimination Strategies", text: "" },
+    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", text: "" },
+    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", text: "" },
+    { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", text: "" },
+    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "" },
+    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "" },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751." },
+    { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", text: "Short. Read it the day before the test." },
   ],
 };
 // helpers for the saved values
@@ -1014,7 +977,7 @@ function daysUntil(fromKey, toKey) {
   return Math.max(0, Math.round((toDate(toKey) - toDate(fromKey)) / 86400000));
 }
 // One row of the list. Math rows get a 👨‍🏫 Tutor button when showTutor is set.
-function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
+function PlanRow({ i, toggleWeek, value, isNext, showTutor, hard }) {
   const on = isDone(value);
   const tutor = isTutor(value);
   const known = isKnown(value);
@@ -1034,7 +997,8 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
             {i.lesson}{i.page && <span style={{ ...S.mono, fontSize: 10.5, color: on ? "#3A4356" : "#6FA8FF", fontWeight: 400 }}> ({i.page})</span>}
           </span>
           {i.topic && <span style={{ ...S.body, fontSize: 12.5, color: on ? "#3A4356" : "#C9D2E0", display: "block", marginTop: 2 }}>{i.topic}</span>}
-          {!on && <span style={{ ...S.body, fontSize: 12, color: "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>}
+          {!on && i.text && <span style={{ ...S.body, fontSize: 12, color: "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>}
+          {tutor && hard && <span style={{ ...S.body, fontSize: 12, color: TUTOR_COLOR, display: "block", marginTop: 2 }}>📝 “{hard}”</span>}
           {i.tag && !on && !tutor && <span style={{ ...S.mono, fontSize: 9.5, color: TAGS[i.tag].color, display: "block", marginTop: 4 }}>{TAGS[i.tag].label}</span>}
         </span>
         <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, alignSelf: "center" }}>
@@ -1044,7 +1008,7 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
         </span>
       </button>
       {showTutor && !on && !tutor && (
-        <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`} style={S.tutorBtn}>👨‍🏫<br />Too hard</button>
+        <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`} style={S.tutorBtn}>👨‍🏫<br />Ask tutor</button>
       )}
       {showTutor && tutor && (
         <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo tutor ${i.lesson}`} style={{ ...S.tutorBtn, color: "#7A8598", borderColor: "#2A3242" }}>undo</button>
@@ -1088,32 +1052,46 @@ function nextIn(items, weekDone) {
   return items.slice(last + 1).find((i) => !weekDone[i.id]) || items.find((i) => !weekDone[i.id]) || null;
 }
 
-// What he saved for the tutor, short: ["📐 11.2", "📖 5.1"], math first.
-function tutorItems(weekDone) {
-  const short = (i) => i.lesson.replace("Lesson ", "");
+// A lesson by id, with its subject: { ...lesson, subj: "Math" | "ELA" }.
+function lessonById(id) {
+  const m = KAPLAN_PLAN.math.find((i) => i.id === id);
+  if (m) return { ...m, subj: "Math" };
+  const e = KAPLAN_PLAN.ela.find((i) => i.id === id);
+  return e ? { ...e, subj: "ELA" } : null;
+}
+
+// What he said is hard about one lesson (open notes only), joined.
+function hardNote(notes, id) {
+  return notes.filter((n) => n.lessonId === id && !n.done).map((n) => n.text).join("; ");
+}
+
+// What he saved for the tutor, short, with his note: ["📐 11.2 (#3, #7)", "📖 4.7"].
+function tutorItems(weekDone, notes = []) {
+  const one = (i, icon) => { const h = hardNote(notes, i.id); return `${icon} ${i.lesson.replace("Lesson ", "")}${h ? ` (${h})` : ""}`; };
   return [
-    ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => `📐 ${short(i)}`),
-    ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => `📖 ${short(i)}`),
+    ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => one(i, "📐")),
+    ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => one(i, "📖")),
   ];
 }
 
 // ---- progress report to Depinder's Google Sheet -------------------------
-// So his brother can see his progress without asking. Every ✓ / Too hard /
-// undo sends an update to a Google Apps Script web app (progress-sheet/Code.gs),
-// which writes it to a Google Sheet and emails him. A quiet update (no email)
-// also goes out when the app opens or he leaves it, so the Sheet has today's
-// Kaplan time. Each update carries the whole lesson list, so the Sheet always
-// matches the phone even if one update gets lost. Offline? It waits in a queue
-// and goes out next time. Empty REPORT_URL = reporting off.
+// So his brother can see his progress without asking. Every ✓ / Ask tutor /
+// undo, and every "what's hard" note, sends an update to a Google Apps Script
+// web app (progress-sheet/Code.gs), which writes it to a Google Sheet and
+// emails him. A quiet update (no email) also goes out when the app opens or he
+// leaves it, so the Sheet has today's Kaplan time. Each update carries the
+// whole lesson list, so the Sheet always matches the phone even if one update
+// gets lost. Offline? It waits in a queue and goes out next time. Empty
+// REPORT_URL = reporting off.
 const REPORT_URL = "";
 const REPORT_QUEUE_KEY = "guri-report-queue";
 const REPORT_LAST_KEY = "guri-report-last";
 
-function buildReport(kind, event, weekDone, todayKey, byCat) {
+function buildReport(kind, event, weekDone, todayKey, byCat, notes = []) {
   const status = (v) => (!v ? "Open" : isTutor(v) ? "For tutor" : isKnown(v) ? "Done (knew it)" : "Done");
   const rows = (items, subj) => {
     const nx = nextIn(items, weekDone);
-    return items.map((i) => [subj, i.lesson, i.page || "", status(weekDone[i.id]), doneDay(weekDone[i.id]) || "", nx && nx.id === i.id ? "Next" : ""]);
+    return items.map((i) => [subj, i.lesson, i.page || "", status(weekDone[i.id]), doneDay(weekDone[i.id]) || "", nx && nx.id === i.id ? "Next" : "", hardNote(notes, i.id)]);
   };
   const all = [...KAPLAN_PLAN.math, ...KAPLAN_PLAN.ela];
   const nm = nextIn(KAPLAN_PLAN.math, weekDone), ne = nextIn(KAPLAN_PLAN.ela, weekDone);
@@ -1125,7 +1103,7 @@ function buildReport(kind, event, weekDone, todayKey, byCat) {
     summary: {
       left: all.filter((i) => !isDone(weekDone[i.id])).length,
       handledToday: all.filter((i) => { const v = weekDone[i.id]; return v && !isKnown(v) && doneDay(v) === todayKey; }).length,
-      tutor: tutorItems(weekDone).join(", "),
+      tutor: tutorItems(weekDone, notes).join(", "),
       next: [nm && `Math ${short(nm)}`, ne && `ELA ${short(ne)}`].filter(Boolean).join(" · ") || "nothing left",
       daysLeft: daysUntil(todayKey, TEST_DATE),
     },
@@ -1159,15 +1137,19 @@ function rememberSig(sig) {
   lastSig = sig;
   try { window.storage.set(REPORT_LAST_KEY, sig).catch(() => {}); } catch (e) {}
 }
-function lessonReport(event, weekDone, todayKey, times) {
+function lessonReport(event, weekDone, todayKey, times, notes, kind = "lesson") {
   if (!REPORT_URL) return;
-  const p = buildReport("lesson", event, weekDone, todayKey, readStudy(times.study, Date.now()).byCat);
+  const p = buildReport(kind, event, weekDone, todayKey, readStudy(times.study, Date.now()).byCat, notes);
   rememberSig(reportSig(p));
   return report(p);
 }
-async function syncReport(weekDone, todayKey, times) {
+// When he writes what was hard: logged and emailed like a lesson tap.
+function noteReport(event, weekDone, todayKey, times, notes) {
+  return lessonReport(event, weekDone, todayKey, times, notes, "note");
+}
+async function syncReport(weekDone, todayKey, times, notes) {
   if (!REPORT_URL) return;
-  const p = buildReport("sync", null, weekDone, todayKey, readStudy(times.study, Date.now()).byCat);
+  const p = buildReport("sync", null, weekDone, todayKey, readStudy(times.study, Date.now()).byCat, notes);
   if (lastSig === null) {
     try { const r = await window.storage.get(REPORT_LAST_KEY); lastSig = r?.value || ""; } catch (e) { lastSig = ""; }
   }
@@ -1180,7 +1162,7 @@ async function syncReport(weekDone, todayKey, times) {
 // ---- TEST LIST tab ---------------------------------------------------
 // Everything left for the test. Done items stay crossed off. Math that's too
 // hard gets sent to the tutor's list instead of being skipped.
-function TestListTab({ weekDone, toggleWeek, todayKey }) {
+function TestListTab({ weekDone, toggleWeek, todayKey, notes = [] }) {
   const List = ({ title, items, note }) => {
     const next = nextIn(items, weekDone);
     const count = items.filter((i) => isDone(weekDone[i.id])).length;
@@ -1193,7 +1175,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
         {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
         {items.map((i) => (
           <PlanRow key={i.id} i={i} value={weekDone[i.id]} isNext={next && next.id === i.id}
-            toggleWeek={toggleWeek} showTutor />
+            toggleWeek={toggleWeek} showTutor hard={hardNote(notes, i.id)} />
         ))}
       </div>
     );
@@ -1203,10 +1185,10 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
     <div style={{ padding: "4px 16px 4px" }}>
       <SectionLabel text={`EVERYTHING FOR THE TEST · ${shortDate(TEST_DATE).toUpperCase()}`} />
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 0" }}>
-        Do the Perform set. Easy → <b>✓</b>. Hard → <b>👨‍🏫 Too hard</b>.
+        All right → <b>✓</b>. Some wrong → <b>👨‍🏫 Ask tutor</b>.
       </p>
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
-      <TutorList weekDone={weekDone} />
+      <TutorList weekDone={weekDone} notes={notes} />
       <List title="📐 Math" items={m} />
       <List title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." />
     </div>
@@ -1214,8 +1196,8 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
 }
 
 // What he saved for the tutor, as one short line: math first, then ELA.
-function TutorList({ weekDone }) {
-  const list = tutorItems(weekDone);
+function TutorList({ weekDone, notes }) {
+  const list = tutorItems(weekDone, notes);
   if (list.length === 0) return null;
   return (
     <div style={S.tutorBox}>
@@ -1233,7 +1215,7 @@ function TutorList({ weekDone }) {
 // The goal is 2 a day with at least 1 math. ELA is every other day: if he did no
 // ELA yesterday, 1 ELA is part of today's 2. Math has about twice as many lessons
 // left and the tutor backs it up, so most of the time goes to math.
-function TodayCard({ weekDone, toggleWeek, todayKey }) {
+function TodayCard({ weekDone, toggleWeek, todayKey, notes, addNote }) {
   const handledOn = (i, k) => { const v = weekDone[i.id]; return !!v && !isKnown(v) && doneDay(v) === k; };
   const m = KAPLAN_PLAN.math, e = KAPLAN_PLAN.ela;
   const mToday = m.filter((i) => handledOn(i, todayKey));
@@ -1256,24 +1238,24 @@ function TodayCard({ weekDone, toggleWeek, todayKey }) {
         {!met && count < 2 && <span style={{ ...S.mono, fontSize: 12, color: "#6FA8FF" }}>{count}/2</span>}
       </div>
       <div style={{ ...S.body, fontSize: 13, color: met ? "#6FE3B4" : count >= 2 ? "#F2C14E" : "#C9D2E0", marginTop: 4 }}>
-        {met ? (nothingLeft ? "Review your post-its." : "Keep going if you can 👇")
+        {met ? (nothingLeft ? "Go over your notes with your tutor." : "Keep going if you can 👇")
           : count >= 2 ? (needEla ? "1 📖 ELA still due today" : "1 📐 math still due today")
           : elaDue ? "1 📐 math + 1 📖 ELA" : "📐 Math first"}
       </div>
 
-      <Lane title="📐 MATH" isMath today={mToday} next={mNext} weekDone={weekDone} toggleWeek={toggleWeek}
+      <Lane title="📐 MATH" isMath today={mToday} next={mNext} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote}
         note={mToday.length ? `✓ ${mToday.length} today` : "start here"} />
-      <Lane title="📖 ELA" today={eToday} next={eNext} weekDone={weekDone} toggleWeek={toggleWeek}
+      <Lane title="📖 ELA" today={eToday} next={eNext} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote}
         note={eToday.length ? `✓ ${eToday.length} today` : elaDue ? "1 due today" : "if you have time"} />
 
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
-      <TutorList weekDone={weekDone} />
+      <TutorList weekDone={weekDone} notes={notes} />
     </div>
   );
 }
 
 // One subject: what he handled today (small, crossed off) and then the next one, big.
-function Lane({ title, isMath, today, next, note, weekDone, toggleWeek }) {
+function Lane({ title, isMath, today, next, note, weekDone, toggleWeek, notes, addNote }) {
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px" }}>
@@ -1283,42 +1265,48 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek }) {
       {today.map((i) => {
         const tutor = isTutor(weekDone[i.id]);
         return (
-          <div key={i.id} style={S.extraRow}>
-            <span style={{ ...S.display, fontSize: 14, color: tutor ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: tutor ? "none" : "line-through" }}>
-              {tutor ? "👨‍🏫" : "✓"} {i.lesson}
-            </span>
-            <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
+          <div key={i.id} style={{ ...S.extraRow, display: "block" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ ...S.display, fontSize: 14, color: tutor ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: tutor ? "none" : "line-through" }}>
+                {tutor ? "👨‍🏫" : "✓"} {i.lesson}
+              </span>
+              <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
+            </div>
+            {tutor && <HardNote i={i} notes={notes} addNote={addNote} />}
           </div>
         );
       })}
-      {next ? <HeroTask i={next} toggleWeek={toggleWeek} />
+      {next ? <HeroTask i={next} isMath={isMath} toggleWeek={toggleWeek} />
             : <div style={{ ...S.body, fontSize: 13, color: "#6FE3B4", margin: "6px 2px 0" }}>All {isMath ? "math" : "ELA"} done ✓</div>}
     </div>
   );
 }
 
-// The next lesson in a lane: big name, page, ✓ DONE, and 👨‍🏫 Too hard.
-function HeroTask({ i, toggleWeek }) {
+// His steps for each subject, in his words (from Depinder). Shown on every card.
+const STEPS = {
+  math: ["Go through the lesson.", `Get it? Do the Perform set (answers p.${MATH_ANSWERS_PAGE}).`, "Wrong ones: circle them → 👨‍🏫 Ask tutor."],
+  ela: ["Read the lesson till you get it.", `Do the topic test at the end (answers p.${ELA_ANSWERS_PAGE}).`, "Wrong ones: highlight them → 👨‍🏫 Ask tutor."],
+};
+
+// The next lesson in a lane: big name, topic, page, his steps, ✓ DONE and 👨‍🏫 Ask tutor.
+function HeroTask({ i, isMath, toggleWeek }) {
   return (
     <div style={{ ...S.heroTask, marginTop: 6 }}>
       {i.tag && <div style={{ ...S.mono, fontSize: 10, color: TAGS[i.tag].color }}>{TAGS[i.tag].label}</div>}
       <div style={{ ...S.display, fontSize: 22, color: "#E8ECF4", marginTop: i.tag ? 3 : 0 }}>{i.lesson}</div>
       <div style={{ ...S.display, fontSize: 15, color: "#C9D2E0", marginTop: 2, lineHeight: 1.3 }}>{i.topic}</div>
       {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>{i.page}</div>}
-      <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>
+      {i.text && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
+      <ol style={{ ...S.body, fontSize: 12.5, color: "#B8C2D4", margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
+        {STEPS[isMath ? "math" : "ela"].map((t) => <li key={t}>{t}</li>)}
+      </ol>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ DONE</button>
-        {(
-          <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
-            style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
-            👨‍🏫 Too hard
-          </button>
-        )}
+        <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ ALL RIGHT</button>
+        <button onClick={() => toggleWeek(i.id, "tutor")} aria-label={`Tutor ${i.lesson}`}
+          style={{ ...S.heroBtn, flex: "0 0 auto", padding: "0 14px", background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>
+          👨‍🏫 Ask tutor
+        </button>
       </div>
-      <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 8 }}>
-        4 of 5 right (no guessing) → <b style={{ color: "#6FE3B4" }}>✓</b> · fewer → <b style={{ color: TUTOR_COLOR }}>👨‍🏫</b>
-      </div>
-      {i.yt && <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 6, userSelect: "text" }}>🔎 Stuck? YouTube: “{i.yt}”</div>}
     </div>
   );
 }
@@ -1327,35 +1315,72 @@ function SectionLabel({ text }) {
   return <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "2px 0 10px" }}>{text}</div>;
 }
 
-function NotesPanel({ notes, noteInput, setNoteInput, showNotes, setShowNotes, addNote, deleteNote }) {
+// ---- NOTES tab ---------------------------------------------------------
+// Top: what he said is hard, as a to-do list for the tutor. He (or the tutor)
+// checks one off once they've gone over it. Below: notes about anything else.
+function NotesTab({ notes, addNote, toggleNoteDone, deleteNote }) {
+  const [text, setText] = useState("");
+  const [showDone, setShowDone] = useState(false);
+  const lesson = notes.filter((n) => n.lessonId && !n.done);
+  const gone = notes.filter((n) => n.lessonId && n.done);
+  const other = notes.filter((n) => !n.lessonId);
+  const Row = ({ n, check }) => {
+    const item = lessonById(n.lessonId);
+    return (
+      <div style={{ ...S.noteRow, opacity: n.done ? 0.6 : 1 }}>
+        {check && (
+          <button onClick={() => toggleNoteDone(n.id)} aria-label={`${n.done ? "Not done" : "Gone over"}: ${item ? item.lesson : ""}`}
+            style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: n.done ? "#3DDC97" : TUTOR_COLOR, background: n.done ? "#3DDC97" : "transparent", cursor: "pointer", marginTop: 1 }}>
+            {n.done && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
+          </button>
+        )}
+        <span style={{ flex: 1, minWidth: 0 }}>
+          {item && <span style={{ ...S.display, fontSize: 13.5, color: "#E8ECF4", display: "block" }}>{item.subj === "Math" ? "📐" : "📖"} {item.lesson} · {item.topic}</span>}
+          <span style={{ ...S.body, fontSize: 12.5, color: item ? TUTOR_COLOR : "#C9D2E0", display: "block", marginTop: item ? 2 : 0, lineHeight: 1.5, wordBreak: "break-word" }}>
+            {item ? "Guri said this is hard: " : ""}{n.text}
+          </span>
+          <span style={{ ...S.mono, fontSize: 9.5, color: "#556075" }}>{n.stamp}</span>
+        </span>
+        <button onClick={() => deleteNote(n.id)} style={{ background: "none", border: "none", color: "#3A4356", cursor: "pointer", fontSize: 13, padding: "0 2px" }} aria-label="Delete note">✕</button>
+      </div>
+    );
+  };
   return (
-    <div style={{ padding: "16px 16px 0" }}>
-      <button onClick={() => setShowNotes(!showNotes)} style={{ ...S.mono, fontSize: 10, letterSpacing: 1, color: "#7A8598", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, cursor: "pointer", padding: "10px 0", width: "100%", textAlign: "center" }}>
-        {showNotes ? `▴ NOTES (${notes.length})` : `▾ NOTES — problems, complaints, anything (${notes.length})`}
-      </button>
-      {showNotes && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addNote(); }}
-              placeholder="e.g. packet Q14 made no sense"
-              style={{ ...S.body, flex: 1, fontSize: 13, color: "#E8ECF4", background: "#12161F", border: "1px solid #1E2530", borderRadius: 8, padding: "10px 11px", outline: "none", minWidth: 0 }} />
-            <button onClick={addNote} disabled={!noteInput.trim()} style={{ ...S.display, fontSize: 12, letterSpacing: 1, color: noteInput.trim() ? "#0B0E14" : "#556075", background: noteInput.trim() ? "#6FA8FF" : "#1E2530", border: "none", borderRadius: 8, padding: "10px 14px", cursor: noteInput.trim() ? "pointer" : "default" }}>ADD</button>
-          </div>
-          {notes.length === 0 ? (
-            <p style={{ ...S.body, fontSize: 12, color: "#556075", textAlign: "center", padding: "14px 0 4px" }}>Nothing yet. Stuck on something? Class issue? Drop it here so it doesn't get forgotten.</p>
-          ) : (
-            <div style={{ marginTop: 10 }}>
-              {notes.map((n) => (
-                <div key={n.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, padding: "10px 12px", marginBottom: 7 }}>
-                  <span style={{ ...S.mono, fontSize: 9.5, color: "#556075", whiteSpace: "nowrap", marginTop: 2 }}>{n.stamp}</span>
-                  <span style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", flex: 1, lineHeight: 1.5, wordBreak: "break-word" }}>{n.text}</span>
-                  <button onClick={() => deleteNote(n.id)} style={{ background: "none", border: "none", color: "#3A4356", cursor: "pointer", fontSize: 13, padding: "0 2px" }} aria-label="Delete note">✕</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+    <div style={{ padding: "4px 16px 4px" }}>
+      <SectionLabel text="👨‍🏫 ASK YOUR TUTOR" />
+      {lesson.length === 0
+        ? <p style={{ ...S.body, fontSize: 12.5, color: "#556075", margin: "0 2px 6px" }}>Nothing yet. When you tap 👨‍🏫 Ask tutor, write what was hard and it shows up here.</p>
+        : lesson.map((n) => <Row key={n.id} n={n} check />)}
+      {gone.length > 0 && (
+        <button onClick={() => setShowDone(!showDone)} style={{ ...S.mono, fontSize: 10, color: "#7A8598", background: "none", border: "none", cursor: "pointer", padding: "4px 2px" }}>
+          {showDone ? "▴" : "▾"} GONE OVER ({gone.length})
+        </button>
       )}
+      {showDone && gone.map((n) => <Row key={n.id} n={n} check />)}
+
+      <div style={{ marginTop: 18 }}><SectionLabel text="OTHER NOTES" /></div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addNote(text); setText(""); } }}
+          placeholder="e.g. packet Q14 made no sense" style={S.noteInput} />
+        <button onClick={() => { addNote(text); setText(""); }} disabled={!text.trim()} style={S.noteAdd(!!text.trim())}>ADD</button>
+      </div>
+      <div style={{ marginTop: 10 }}>{other.map((n) => <Row key={n.id} n={n} />)}</div>
+    </div>
+  );
+}
+
+// Under a lesson he sent to the tutor: a box to say what was hard. Once it's
+// saved, the note shows instead (and lives in the Notes tab).
+function HardNote({ i, notes, addNote }) {
+  const [text, setText] = useState("");
+  const saved = notes.find((n) => n.lessonId === i.id && !n.done);
+  if (saved) return <div style={{ ...S.body, fontSize: 12, color: TUTOR_COLOR, marginTop: 4 }}>📝 “{saved.text}”</div>;
+  const save = () => { addNote(text, i.id); setText(""); };
+  return (
+    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+      <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+        placeholder="What's hard? e.g. #3, #7" aria-label={`What's hard in ${i.lesson}`} style={{ ...S.noteInput, padding: "7px 9px", fontSize: 12.5 }} />
+      <button onClick={save} disabled={!text.trim()} aria-label={`Save note for ${i.lesson}`} style={{ ...S.noteAdd(!!text.trim()), padding: "7px 10px", fontSize: 11 }}>SAVE</button>
     </div>
   );
 }
@@ -1468,6 +1493,9 @@ const S = {
   tutorBtn: { minWidth: 52, border: "1px solid rgba(192,140,255,0.5)", background: "#161B26", color: "#C08CFF", borderRadius: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, lineHeight: 1.3, cursor: "pointer", padding: "0 6px" },
   extraRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 10px", borderRadius: 10, border: "1px solid #1E2530", background: "#0F131B", marginTop: 5 },
   extraUndo: { fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#7A8598", background: "none", border: "1px solid #2A3242", borderRadius: 6, padding: "3px 8px", cursor: "pointer" },
+  noteRow: { display: "flex", gap: 10, alignItems: "flex-start", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, padding: "10px 12px", marginBottom: 7 },
+  noteInput: { fontFamily: "'Inter', sans-serif", flex: 1, fontSize: 13, color: "#E8ECF4", background: "#12161F", border: "1px solid #1E2530", borderRadius: 8, padding: "10px 11px", outline: "none", minWidth: 0 },
+  noteAdd: (on) => ({ fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: on ? "#0B0E14" : "#556075", background: on ? "#6FA8FF" : "#1E2530", border: "none", borderRadius: 8, padding: "10px 14px", cursor: on ? "pointer" : "default" }),
   tutorBox: { marginTop: 10, padding: "9px 11px", borderRadius: 10, border: "1px solid rgba(192,140,255,0.35)", background: "rgba(192,140,255,0.07)", fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#D9C2FF" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },
@@ -1477,10 +1505,6 @@ const S = {
   timerBtnGhost: { fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#7A8598", background: "transparent", border: "1px solid #2A3242", borderRadius: 8, padding: "8px 12px", cursor: "pointer" },
   schedRow: { display: "flex", gap: 12, marginBottom: 12, alignItems: "flex-start" },
   schedNum: { width: 22, height: 22, minWidth: 22, borderRadius: 6, background: "#161B26", border: "1px solid #2A3242", color: "#6FA8FF", fontFamily: "'JetBrains Mono', monospace", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 },
-  restRule: { padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(242,193,78,0.3)", background: "rgba(242,193,78,0.05)", textAlign: "left" },
-  guideCard: { border: "1px solid #1E2530", borderRadius: 12, background: "#12161F", padding: "14px 14px", marginBottom: 10 },
-  guideNum: { width: 24, height: 24, minWidth: 24, borderRadius: "50%", background: "#2E6FF2", color: "#fff", fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1 },
-  guideTip: { marginTop: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(242,193,78,0.08)", border: "1px solid rgba(242,193,78,0.25)", fontFamily: "'Inter', sans-serif", fontSize: 11.5, color: "#D9C88A", lineHeight: 1.5 },
   navBtn: { width: 32, height: 32, borderRadius: 8, border: "1px solid #1E2530", background: "#12161F", color: "#8A94A8", fontSize: 16, cursor: "pointer" },
   calGrid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 },
   calDow: { textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "#556075", padding: "4px 0" },

@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 23 versions based on how he actually used it.
+through 24 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -33,17 +33,19 @@ nag him.
 - **A Test List** of every lesson left before the test, in book order with
   page numbers, and his weak spots tagged from his practice-test results.
   "Next" is always the lesson after the furthest one he's done, so it follows
-  his tutor. If a lesson is too hard, one tap puts it on a list for his tutor
-  instead of skipping it.
+  his tutor. If he gets some wrong, one tap puts the lesson on a list for his
+  tutor instead of skipping it.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.
-- **Progress reports to me.** Each lesson he finishes or sends to the tutor
-  goes to a Google Sheet and emails me, so I can see how he's doing without
-  asking.
+- **Progress reports to me.** Each lesson he finishes or sends to the tutor,
+  and each note about what's hard, goes to a Google Sheet and emails me, so I
+  can see how he's doing without asking.
 - **A phone-time cap** (2.5 hours max, aim for under 2).
-- **A How to tab** with his study method in four short steps.
-- **Notes and a backup code,** so questions don't get forgotten and his
-  history can move to a new version of the app.
+- **His steps on every lesson card,** three short lines for Math and for ELA.
+- **A Notes tab.** When he taps "Ask tutor," he writes what was hard, and it
+  becomes a to-do list for his tutor ("Guri said this is hard: #3, #7") until
+  it's checked off. Other notes go there too.
+- **A backup code,** so his history can move to a new version of the app.
 
 ## The hard part: figuring out what he actually needed
 

@@ -1,9 +1,10 @@
 // Guri's SHSAT progress log
 // ---------------------------------------------------------------------------
 // The Quest Log app on his phone sends a small update here every time he taps
-// ✓ Done or 👨‍🏫 Too hard (and a quiet one with today's Kaplan time when he
-// leaves the app). This script keeps the "Guri SHSAT Progress" Google Sheet up
-// to date and emails Depinder each time a lesson is done or sent to the tutor.
+// ✓ Done or 👨‍🏫 Ask tutor, every time he writes what was hard, and a quiet one
+// with today's Kaplan time when he leaves the app. This script keeps the "Guri
+// SHSAT Progress" Google Sheet up to date and emails Depinder each time a
+// lesson is done, sent to the tutor, or gets a "this is hard" note.
 //
 // Setup, once: paste this into Extensions → Apps Script in the Sheet, run
 // setup(), then Deploy → New deployment → Web app (Execute as: Me, Who has
@@ -15,7 +16,7 @@
 const SHEET_ID = "1-onh601HIlYxbU1bZ2FxtRl8nA6DXbSJnUuKrEwAYQ4";
 const TZ = "America/New_York";
 const MAX_EMAILS_PER_DAY = 30; // the web app URL is public, so cap the emails
-const ACTION_LABELS = { done: "Done", tutor: "Too hard (for tutor)", undo: "Undone" };
+const ACTION_LABELS = { done: "Done", tutor: "Ask tutor", undo: "Undone", note: "Said it's hard" };
 const STATUSES = ["Done", "Done (knew it)", "For tutor", "Open"];
 
 // ---- web app ----------------------------------------------------------------
@@ -30,9 +31,9 @@ function doPost(e) {
     ensureSetup(ss);
     writeLessons(ss, data);
     writeDay(ss, data);
-    if (data.kind === "lesson") {
+    if (data.kind === "lesson" || data.kind === "note") {
       writeLog(ss, data);
-      if (data.event.action === "done" || data.event.action === "tutor") sendEmail(ss, data);
+      if (data.event.action !== "undo") sendEmail(ss, data);
     }
     return text("ok");
   } finally {
@@ -53,21 +54,24 @@ function text(s) {
 function valid(d) {
   if (!d || d.v !== 1 || !Array.isArray(d.lessons) || d.lessons.length > 200) return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.today)) || typeof d.at !== "number") return false;
-  if (d.kind === "lesson") {
+  if (d.kind === "lesson" || d.kind === "note") {
     const ev = d.event || {};
     if (!ACTION_LABELS[ev.action] || typeof ev.lesson !== "string") return false;
+    if ((d.kind === "note") !== (ev.action === "note")) return false;
+    if (d.kind === "note" && typeof ev.text !== "string") return false;
   } else if (d.kind !== "sync") return false;
-  return d.lessons.every((r) => Array.isArray(r) && r.length === 6 && STATUSES.indexOf(r[3]) !== -1);
+  return d.lessons.every((r) => Array.isArray(r) && (r.length === 6 || r.length === 7) && STATUSES.indexOf(r[3]) !== -1);
 }
 
 // ---- writing ----------------------------------------------------------------
 // Lessons tab: one row per lesson, replaced in full with what the phone has.
+// Column G is what he said is hard about it (open notes only).
 function writeLessons(ss, d) {
   const sh = ss.getSheetByName("Lessons");
-  const rows = d.lessons.map((r) => [str(r[0]), str(r[1]), str(r[2]), r[3], toDate(r[4]), str(r[5])]);
+  const rows = d.lessons.map((r) => [str(r[0]), str(r[1]), str(r[2]), r[3], toDate(r[4]), str(r[5]), str(r[6])]);
   const old = Math.max(sh.getLastRow() - 1, 0);
-  if (old > 0) sh.getRange(2, 1, old, 6).clearContent();
-  if (rows.length) sh.getRange(2, 1, rows.length, 6).setValues(rows);
+  if (old > 0) sh.getRange(2, 1, old, 7).clearContent();
+  if (rows.length) sh.getRange(2, 1, rows.length, 7).setValues(rows);
   sh.getRange("H2").setValue(new Date(d.at));
 }
 
@@ -92,7 +96,8 @@ function writeDay(ss, d) {
 function writeLog(ss, d) {
   const sh = ss.getSheetByName("Log");
   const ev = d.event, s = d.summary || {};
-  sh.appendRow([new Date(d.at), str(ev.subj), str(ev.lesson), ACTION_LABELS[ev.action], num(s.left),
+  const what = ev.action === "note" ? ACTION_LABELS.note + ": " + str(ev.text) : ACTION_LABELS[ev.action];
+  sh.appendRow([new Date(d.at), str(ev.subj), str(ev.lesson), what, num(s.left),
     num(d.kaplan && d.kaplan.math) + num(d.kaplan && d.kaplan.ela)]);
 }
 
@@ -105,19 +110,24 @@ function sendEmail(ss, d) {
 
   const ev = d.event, s = d.summary || {};
   const k = d.kaplan || {};
-  const what = ev.action === "tutor"
-    ? "marked " + ev.lesson + " (" + ev.subj + ") too hard, so it's on his tutor list"
-    : "finished " + ev.lesson + " (" + ev.subj + ")";
-  const subject = (ev.action === "tutor" ? "👨‍🏫 " : "✓ ") + "Guri " +
-    (ev.action === "tutor" ? "sent " + ev.lesson + " to his tutor" : "finished " + ev.lesson);
+  const time = Utilities.formatDate(new Date(d.at), TZ, "h:mm a");
+  const first = ev.action === "note"
+    ? "Guri said " + ev.lesson + " (" + ev.subj + ") is hard: \u201C" + str(ev.text) + "\u201D (" + time + ")."
+    : ev.action === "tutor"
+      ? "Guri got some of " + ev.lesson + " (" + ev.subj + ") wrong and put it on his tutor list (" + time + ")."
+      : "Guri finished " + ev.lesson + " (" + ev.subj + ") at " + time + ".";
+  const subject = ev.action === "note" ? "📝 Guri says " + ev.lesson + " is hard: " + str(ev.text)
+    : ev.action === "tutor" ? "👨‍🏫 Guri needs his tutor for " + ev.lesson
+    : "✓ Guri finished " + ev.lesson;
   const body = [
-    "Guri " + what + " at " + Utilities.formatDate(new Date(d.at), TZ, "h:mm a") + ".",
+    first,
     "",
     "Today: " + num(s.handledToday) + " lesson" + (num(s.handledToday) === 1 ? "" : "s") +
       ", Kaplan " + mins(num(k.math) + num(k.ela)) + " (Math " + mins(num(k.math)) + ", ELA " + mins(num(k.ela)) + ")",
     "Left: " + num(s.left) + " lessons, " + num(s.daysLeft) + " days to the test",
     "Next: " + str(s.next),
     "For his tutor: " + (str(s.tutor) || "nothing"),
+    "Open his Notes tab with the tutor to go over what he wrote.",
     "",
     "Full log: " + ss.getUrl(),
   ].join("\n");
@@ -138,11 +148,11 @@ function ensureSetup(ss, force) {
   if (!ss.getSheetByName("Now") && first.getLastRow() === 0) first.setName("Now");
   const now = tab(ss, "Now"), lessons = tab(ss, "Lessons"), days = tab(ss, "Days"), log = tab(ss, "Log");
 
-  header(lessons, ["Subject", "Lesson", "Page", "Status", "Date", "Next"]);
+  header(lessons, ["Subject", "Lesson", "Page", "Status", "Date", "Next", "What he says is hard"]);
   lessons.getRange("H1").setValue("Last update").setFontWeight("bold");
   lessons.getRange("E2:E").setNumberFormat("ddd m/d");
   lessons.getRange("H2").setNumberFormat("ddd m/d h:mm am/pm");
-  widths(lessons, [80, 110, 150, 140, 90, 60, 20, 150]);
+  widths(lessons, [80, 110, 150, 120, 90, 60, 220, 150]);
   const status = lessons.getRange("D2:D");
   lessons.setConditionalFormatRules([
     SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith("Done").setBackground("#D9EAD3").setRanges([status]).build(),
@@ -176,7 +186,7 @@ function ensureSetup(ss, force) {
     ["Next math", '=IFERROR(INDEX(FILTER(' + L("B2:B") + ',' + L("A2:A") + '="Math",' + L("F2:F") + '="Next"),1),"None left")'],
     ["Next ELA", '=IFERROR(INDEX(FILTER(' + L("B2:B") + ',' + L("A2:A") + '="ELA",' + L("F2:F") + '="Next"),1),"None left")'],
     ["For his tutor", '=IFERROR(TEXTJOIN(", ",TRUE,FILTER(' + L("A2:A") + '&" "&' + L("B2:B") + ',' + L("D2:D") + '="For tutor")),"Nothing")'],
-    ["", ""],
+    ["What he says is hard", '=IFERROR(TEXTJOIN("; ",TRUE,FILTER(' + L("B2:B") + '&": "&' + L("G2:G") + ',' + L("G2:G") + '<>"")),"Nothing")'],
     ["Lessons per day (plan)", 2],
     ["Done by, at that pace", "=IF(OR(B6=0,B15<=0),TODAY(),TODAY()+ROUNDUP(B6/B15,0)-1)"],
     ["Last update from his phone", '=IF(Lessons!H2="","Waiting for his phone",Lessons!H2)'],
@@ -193,6 +203,7 @@ function ensureSetup(ss, force) {
   now.getRange("A1").setFontWeight("bold").setFontSize(14);
   now.getRange("A2").setFontColor("#666666");
   now.getRange("A4:A17").setFontWeight("bold");
+  now.getRange("B13:B14").setWrap(true);
   widths(now, [230, 260]);
 }
 
