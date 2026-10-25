@@ -724,9 +724,9 @@ function PostItsTab() {
         <div style={{ marginTop: 4 }}><b>ELA:</b> always read the passages at home, not at the tutor.</div>
         <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>Math p.{MATH_ANSWERS_PAGE} · ELA p.{ELA_ANSWERS_PAGE}</div>
       </Step>
-      <Step n="2" title="Easy? ✓ Done">Got it right without guessing? Tap ✓ and move on.</Step>
+      <Step n="2" title="Easy? ✓ Done">Easy means you got at least 4 out of every 5 right, without guessing. Tap ✓ and move on.</Step>
       <Step n="3" title="Hard?">
-        Mark the ones you got wrong, then tap 👨‍🏫 Too hard. Your tutor goes over just those, 4–5:30.
+        Fewer than 4 out of 5? Mark the ones you got wrong, then tap 👨‍🏫 Too hard. Your tutor goes over just those, 4–5:30.
       </Step>
       <Step n="4" title="Wrong answers → post-its">
         Post-it with why you missed it. Redo your post-its at the end of the day.
@@ -929,7 +929,9 @@ function DayDetail({ k, info, todayKey }) {
 // Nothing is skipped. He does each lesson's Perform set (the last ~2 pages):
 // easy = done, hard = 👨‍🏫 sent to his tutor (Mon-Fri 4:00-5:30). ELA passages
 // are long, so he reads them at home and the tutor only goes over what he missed.
-// Pages from the table of contents.
+// Pages and topic names from the table of contents. yt = what to type into
+// YouTube if he's stuck (shown as text, not a link, so it's one search and
+// not a feed).
 //
 // Saved values (in weekDone): "2026-10-21" = done that day, "tutor:2026-10-23" =
 // too hard, saved for the tutor, "know:..." = an old "I know it" skip (counts
@@ -940,53 +942,53 @@ const KAPLAN_PLAN = {
   id: "2026-10-12", // storage key - keep the same so old checks carry over
   math: [
     // already done
-    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", text: "Basic terms & translation." },
-    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", text: "Order of operations, number properties, variables. Perform just before page 315." },
-    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", text: "Picking Numbers. Perform just before page 320." },
+    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", yt: "SHSAT translating words into math", text: "Done." },
+    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", topic: "Order of Operations, Number Properties, Variables", yt: "order of operations number properties", text: "Perform just before page 315." },
+    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", topic: "Picking Numbers", yt: "SHSAT picking numbers strategy", text: "Perform just before page 320." },
     // Ch 11 onward, in book order - the order his tutor teaches it
-    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", text: "Fractions & decimals. Perform just before page 334.", tag: "focus" },
-    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", text: "Rounding, number lines, absolute value, factors, multiples. Perform just before page 343.", tag: "focus" },
-    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", text: "Percents. Perform just before page 350.", tag: "strong" },
-    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", text: "Statistics terms. Perform just before page 356." },
-    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", text: "Rates. Perform just before page 360.", tag: "focus" },
-    { id: "m10", lesson: "Lesson 11.6", page: "page 360", text: "Ratios & proportions. Perform just before page 367." },
-    { id: "m11", lesson: "Lesson 11.7", page: "page 367", text: "Coordinate plane. Perform just before page 374." },
-    { id: "m12", lesson: "Lesson 11.8", page: "page 374", text: "Probability, combinations, permutations. Perform just before page 381." },
+    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", topic: "Fractions & Decimals", yt: "SHSAT fractions and decimals", text: "Perform just before page 334.", tag: "focus" },
+    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", topic: "Rounding, Number Lines, Absolute Value, Factors, Multiples", yt: "factors multiples GCF LCM number line", text: "Perform just before page 343.", tag: "focus" },
+    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", topic: "Percents", yt: "SHSAT percent problems", text: "Perform just before page 350.", tag: "strong" },
+    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", topic: "Statistics Terms", yt: "mean median mode range", text: "Perform just before page 356." },
+    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", topic: "Rates", yt: "rate problems distance rate time", text: "Perform just before page 360.", tag: "focus" },
+    { id: "m10", lesson: "Lesson 11.6", page: "page 360", topic: "Ratios & Proportions", yt: "SHSAT ratios and proportions", text: "Perform just before page 367." },
+    { id: "m11", lesson: "Lesson 11.7", page: "page 367", topic: "Coordinate Plane", yt: "coordinate plane 8th grade math", text: "Perform just before page 374." },
+    { id: "m12", lesson: "Lesson 11.8", page: "page 374", topic: "Probability, Combinations, Permutations", yt: "SHSAT probability combinations permutations", text: "Perform just before page 381." },
     // Backsolving is a test trick (plug in the answer choices) used most on
     // equations, so it goes right before Algebra.
-    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", text: "Backsolving. Perform just before page 325.", tag: "focus" },
-    { id: "m13", lesson: "Lesson 12.1", page: "page 382", text: "Expressions & equations, one variable. Perform just before page 388.", tag: "focus" },
-    { id: "m14", lesson: "Lesson 12.2", page: "page 388", text: "Two variables. Perform just before page 396.", tag: "focus" },
-    { id: "m15", lesson: "Lesson 12.3", page: "page 396", text: "Inequalities. Perform just before page 403.", tag: "focus" },
-    { id: "m18", lesson: "Lesson 13.1", page: "page 404", text: "Lines & angles. Perform just before page 416." },
-    { id: "m19", lesson: "Lesson 13.2", page: "page 416", text: "Perimeter & area. Perform just before page 426." },
-    { id: "m20", lesson: "Lesson 13.3", page: "page 426", text: "Geometric figures. Perform just before page 436." },
-    { id: "m21", lesson: "Lesson 13.4", page: "page 436", text: "3-D shapes. Perform just before page 441." },
-    { id: "m17", lesson: "Lesson 14.1", page: "page 442", text: "Word problems: arithmetic. Perform just before page 450.", tag: "focus" },
-    { id: "m23", lesson: "Lesson 14.2", page: "page 450", text: "Word problems: stats & probability. Perform just before page 456." },
-    { id: "m16", lesson: "Lesson 14.3", page: "page 456", text: "Word problems: algebra. Perform just before page 464.", tag: "focus" },
-    { id: "m22", lesson: "Lesson 14.4", page: "page 464", text: "Word problems: geometry. Perform just before page 471." },
-    { id: "m27", lesson: "Lesson 15.1", page: "page 472", text: "Charts. Perform just before page 479." },
-    { id: "m28", lesson: "Lesson 15.2", page: "page 479", text: "Data tables. Perform just before page 487." },
-    { id: "m24", lesson: "Lesson 15.3", page: "page 487", text: "Surveys with two responses. Perform just before page 491." },
-    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", text: "Mixed Perform Sets. Check each set before starting the next." },
-    { id: "m26", lesson: "Lesson 18.2", page: "page 526", text: "Math Strategic Review. Answers start page 751." },
+    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", topic: "Backsolving", yt: "SHSAT backsolving", text: "Perform just before page 325.", tag: "focus" },
+    { id: "m13", lesson: "Lesson 12.1", page: "page 382", topic: "Expressions & Equations, One Variable", yt: "solving one variable equations SHSAT", text: "Perform just before page 388.", tag: "focus" },
+    { id: "m14", lesson: "Lesson 12.2", page: "page 388", topic: "Two Variables", yt: "solving equations with two variables", text: "Perform just before page 396.", tag: "focus" },
+    { id: "m15", lesson: "Lesson 12.3", page: "page 396", topic: "Inequalities", yt: "solving inequalities 8th grade", text: "Perform just before page 403.", tag: "focus" },
+    { id: "m18", lesson: "Lesson 13.1", page: "page 404", topic: "Lines & Angles", yt: "lines and angles geometry 8th grade", text: "Perform just before page 416." },
+    { id: "m19", lesson: "Lesson 13.2", page: "page 416", topic: "Perimeter & Area", yt: "SHSAT perimeter and area", text: "Perform just before page 426." },
+    { id: "m20", lesson: "Lesson 13.3", page: "page 426", topic: "Geometric Figures", yt: "SHSAT geometry triangles circles", text: "Perform just before page 436." },
+    { id: "m21", lesson: "Lesson 13.4", page: "page 436", topic: "3-D Shapes", yt: "volume and surface area 3D shapes", text: "Perform just before page 441." },
+    { id: "m17", lesson: "Lesson 14.1", page: "page 442", topic: "Word Problems: Arithmetic", yt: "SHSAT arithmetic word problems", text: "Perform just before page 450.", tag: "focus" },
+    { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", yt: "SHSAT probability word problems", text: "Perform just before page 456." },
+    { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", yt: "SHSAT algebra word problems", text: "Perform just before page 464.", tag: "focus" },
+    { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", yt: "SHSAT geometry word problems", text: "Perform just before page 471." },
+    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", yt: "reading charts and graphs SHSAT", text: "Perform just before page 479." },
+    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", yt: "SHSAT data tables", text: "Perform just before page 487." },
+    { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", yt: "two way tables 8th grade math", text: "Perform just before page 491." },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", yt: "SHSAT math practice questions", text: "Check each set before starting the next." },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", yt: "SHSAT math review", text: "Answers start page 751." },
   ],
   ela: [
-    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", text: "Redo only the questions you got wrong before.", tag: "focus" },
-    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", text: "Redo only your wrong ones.", tag: "focus" },
-    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
-    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", text: "Roadmapping. Do the full lesson." },
-    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", text: "The Kaplan Method. Do the full lesson." },
-    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", text: "Question types. Do the full lesson." },
-    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", text: "Elimination strategies. Do the full lesson." },
-    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", text: "Fiction. Do the full lesson." },
-    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", text: "Poetry. Do the full lesson." },
-    { id: "e10", lesson: "Lesson 7.3", page: "page 243", text: "Science. Do the full lesson." },
-    { id: "e11", lesson: "Lesson 8.1", page: "page 258", text: "Question types review. Do the full lesson." },
-    { id: "e15", lesson: "Lesson 8.2", page: "page 270", text: "Strategic reading & elimination review. Do the full lesson." },
-    { id: "e13", lesson: "Lesson 18.1", page: "page 518", text: "ELA Strategic Review. Answers start page 751." },
-    { id: "e12", lesson: "Chapter 17", page: "page 507", text: "Preparing for test day. Short — read it the day before the test." },
+    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", yt: "misplaced modifiers run on sentences", text: "Redo only the questions you got wrong before.", tag: "focus" },
+    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", yt: "subject verb agreement pronoun agreement", text: "Redo only your wrong ones.", tag: "focus" },
+    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", yt: "SHSAT revising editing organization", text: "Skip the reading. Do only the Perform questions just before page 137.", tag: "strong" },
+    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", yt: "how to annotate a reading passage", text: "Do the full lesson." },
+    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", yt: "SHSAT reading comprehension strategy", text: "Do the full lesson." },
+    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", yt: "SHSAT reading question types", text: "Do the full lesson." },
+    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", topic: "Elimination Strategies", yt: "process of elimination reading comprehension", text: "Do the full lesson." },
+    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", yt: "SHSAT fiction passage", text: "Do the full lesson." },
+    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", yt: "how to answer poetry questions", text: "Do the full lesson." },
+    { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", yt: "SHSAT science passage reading", text: "Do the full lesson." },
+    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", yt: "SHSAT reading question types", text: "Do the full lesson." },
+    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", yt: "SHSAT reading elimination strategy", text: "Do the full lesson." },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", yt: "SHSAT ELA review", text: "Answers start page 751." },
+    { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", yt: "SHSAT test day tips", text: "Short. Read it the day before the test." },
   ],
 };
 // helpers for the saved values
@@ -1031,6 +1033,7 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
           <span style={{ ...S.display, fontSize: 13.5, color: on ? "#556075" : "#E8ECF4", textDecorationLine: on ? "line-through" : "none" }}>
             {i.lesson}{i.page && <span style={{ ...S.mono, fontSize: 10.5, color: on ? "#3A4356" : "#6FA8FF", fontWeight: 400 }}> ({i.page})</span>}
           </span>
+          {i.topic && <span style={{ ...S.body, fontSize: 12.5, color: on ? "#3A4356" : "#C9D2E0", display: "block", marginTop: 2 }}>{i.topic}</span>}
           {!on && <span style={{ ...S.body, fontSize: 12, color: "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>}
           {i.tag && !on && !tutor && <span style={{ ...S.mono, fontSize: 9.5, color: TAGS[i.tag].color, display: "block", marginTop: 4 }}>{TAGS[i.tag].label}</span>}
         </span>
@@ -1178,7 +1181,7 @@ async function syncReport(weekDone, todayKey, times) {
 // Everything left for the test. Done items stay crossed off. Math that's too
 // hard gets sent to the tutor's list instead of being skipped.
 function TestListTab({ weekDone, toggleWeek, todayKey }) {
-  const List = ({ title, items }) => {
+  const List = ({ title, items, note }) => {
     const next = nextIn(items, weekDone);
     const count = items.filter((i) => isDone(weekDone[i.id])).length;
     return (
@@ -1187,6 +1190,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
           <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</span>
           <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length}</span>
         </div>
+        {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
         {items.map((i) => (
           <PlanRow key={i.id} i={i} value={weekDone[i.id]} isNext={next && next.id === i.id}
             toggleWeek={toggleWeek} showTutor />
@@ -1204,7 +1208,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} />
       <List title="📐 Math" items={m} />
-      <List title="📖 ELA" items={KAPLAN_PLAN.ela} />
+      <List title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." />
     </div>
   );
 }
@@ -1299,7 +1303,8 @@ function HeroTask({ i, toggleWeek }) {
     <div style={{ ...S.heroTask, marginTop: 6 }}>
       {i.tag && <div style={{ ...S.mono, fontSize: 10, color: TAGS[i.tag].color }}>{TAGS[i.tag].label}</div>}
       <div style={{ ...S.display, fontSize: 22, color: "#E8ECF4", marginTop: i.tag ? 3 : 0 }}>{i.lesson}</div>
-      {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 2 }}>{i.page}</div>}
+      <div style={{ ...S.display, fontSize: 15, color: "#C9D2E0", marginTop: 2, lineHeight: 1.3 }}>{i.topic}</div>
+      {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>{i.page}</div>}
       <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ DONE</button>
@@ -1310,6 +1315,10 @@ function HeroTask({ i, toggleWeek }) {
           </button>
         )}
       </div>
+      <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 8 }}>
+        4 of 5 right (no guessing) → <b style={{ color: "#6FE3B4" }}>✓</b> · fewer → <b style={{ color: TUTOR_COLOR }}>👨‍🏫</b>
+      </div>
+      {i.yt && <div style={{ ...S.mono, fontSize: 10.5, color: "#7A8598", marginTop: 6, userSelect: "text" }}>🔎 Stuck? YouTube: “{i.yt}”</div>}
     </div>
   );
 }

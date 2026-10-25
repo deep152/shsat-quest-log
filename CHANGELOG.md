@@ -28,7 +28,8 @@ from watching my brother actually use it. Each version's full code is in
 | 19 | Oct 23 | [Math + ELA lanes](versions/2026-10-23-v19-lanes.jsx) |
 | 20 | Oct 24 | [ELA at home, tutor for what he missed](versions/2026-10-24-v20-ela-at-home.jsx) |
 | 21 | Oct 24 | [Follows the tutor](versions/2026-10-24-v21-follows-the-tutor.jsx) |
-| 22 | Oct 24 | [Progress reports (current)](versions/2026-10-24-v22-progress-reports.jsx) |
+| 22 | Oct 24 | [Progress reports](versions/2026-10-24-v22-progress-reports.jsx) |
+| 23 | Oct 24 | [Topics and the 4-of-5 rule (current)](versions/2026-10-24-v23-topics.jsx) |
 
 ---
 
@@ -215,7 +216,7 @@ at home and the tutor's 90 minutes go to the questions he actually missed.
 order, so a weak-spots-first list kept pointing him at a lesson he'd already
 passed. The tutor decides the order now, and the app keeps up.
 
-### v22 · Oct 24 · Progress reports (current)
+### v22 · Oct 24 · Progress reports
 - Every ✓ Done, 👨‍🏫 Too hard and undo sends a small update to a Google Sheet,
   and I get an email for each lesson he finishes or sends to the tutor.
 - The Sheet has a summary tab (lessons left, today's lessons and Kaplan time,
@@ -227,3 +228,16 @@ passed. The tutor decides the order now, and the app keeps up.
 
 **Why:** checking on his progress meant asking him. Now it comes to me as he
 works, and nothing changes for him.
+
+### v23 · Oct 24 · Topics and the 4-of-5 rule (current)
+- Every lesson shows its topic from the book, like "Fractions & Decimals" or
+  "Organization & Topic Development", on the Today card and the Test List.
+- The Today card shows what to type into YouTube if he's stuck, as plain
+  text rather than a link.
+- "Easy" now has a number: at least 4 out of 5 right without guessing means
+  ✓ Done; fewer means 👨‍🏫 Too hard. The How to tab says the same.
+- The ELA list notes that 4.2, 4.4 and 4.5 were done before Oct 12.
+
+**Why:** "Lesson 4.6" and "Skip the reading" didn't tell him what the lesson
+was about, and "easy?" was a judgment call he couldn't make. The jump from
+4.3 to 4.6 also looked like lessons were missing.
