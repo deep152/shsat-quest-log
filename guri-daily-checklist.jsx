@@ -938,7 +938,6 @@ const KAPLAN_PLAN = {
     { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus" },
     { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus" },
     { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong" },
-    { id: "e16", lesson: "Lesson 4.7", topic: "Revising & Editing", text: "" },
     { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", text: "" },
     { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", text: "" },
     { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", text: "" },
@@ -1062,7 +1061,7 @@ function hardNote(notes, id) {
   return notes.filter((n) => n.lessonId === id && !n.done).map((n) => n.text).join("; ");
 }
 
-// What he saved for the tutor, short, with his note: ["📐 11.2 (#3, #7)", "📖 4.7"].
+// What he saved for the tutor, short, with his note: ["📐 11.2 (#3, #7)", "📖 5.1"].
 function tutorItems(weekDone, notes = []) {
   const one = (i, icon) => { const h = hardNote(notes, i.id); return `${icon} ${i.lesson.replace("Lesson ", "")}${h ? ` (${h})` : ""}`; };
   return [

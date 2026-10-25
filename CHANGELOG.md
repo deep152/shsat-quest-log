@@ -33,6 +33,7 @@ from watching my brother actually use it. Each version's full code is in
 | 24 | Oct 24 | [His steps + Notes tab](versions/2026-10-24-v24-steps-and-notes.jsx) |
 | 25 | Oct 25 | [One Lessons tab](versions/2026-10-25-v25-lessons-tab.jsx) |
 | 26 | Oct 25 | [Pick a lesson (current)](versions/2026-10-25-v26-pick-a-lesson.jsx) |
+| — | Oct 25 | Removed Lesson 4.7 |
 
 ---
 
@@ -285,3 +286,7 @@ should be in one place instead of split across two tabs.
 
 **Why:** the card only showed the next lesson in the book, but some days the
 tutor plans a different one. Switching used to mean going to the Lessons tab.
+
+### Oct 25 · Removed Lesson 4.7
+- Took out the "Lesson 4.7" row added in v24. The book's Chapter 4 ends at 4.6.
+  He was on the topic test at the end of 4.6, not a separate lesson.
