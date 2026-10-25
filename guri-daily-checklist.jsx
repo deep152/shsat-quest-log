@@ -376,8 +376,7 @@ export default function GuriQuestLog() {
       {tab === "today" && (
         <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
-      {tab === "todo" && <TestListTab weekDone={weekDone} toggleWeek={toggleWeek} todayKey={dateKey} notes={notes} />}
-      {tab === "notes" && <NotesTab {...{ notes, addNote, toggleNoteDone, deleteNote }} />}
+      {tab === "todo" && <LessonsTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, toggleNoteDone, deleteNote }} />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
 
       <BackupPanel {...{ completedDates, showBackup, setShowBackup, restoreInput, setRestoreInput, restoreMsg, restoreFromCode }} />
@@ -390,8 +389,7 @@ export default function GuriQuestLog() {
 function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
-    { id: "todo", label: "Test List" },
-    { id: "notes", label: "Notes" },
+    { id: "todo", label: "Lessons" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -880,7 +878,7 @@ function DayDetail({ k, info, todayKey }) {
   );
 }
 
-// ---- the Test List (updated Oct 24) --------------------------------------
+// ---- the lesson plan (updated Oct 25) ------------------------------------
 // Everything left for the test, one list per subject, in book order. Math
 // starts at Ch 11 (Arithmetic), where his tutor started him, and follows the
 // book the way the tutor teaches it. 🎯 tags still mark his weak spots from
@@ -977,7 +975,7 @@ function daysUntil(fromKey, toKey) {
   return Math.max(0, Math.round((toDate(toKey) - toDate(fromKey)) / 86400000));
 }
 // One row of the list. Math rows get a 👨‍🏫 Tutor button when showTutor is set.
-function PlanRow({ i, toggleWeek, value, isNext, showTutor, hard }) {
+function PlanRow({ i, toggleWeek, value, isNext, showTutor }) {
   const on = isDone(value);
   const tutor = isTutor(value);
   const known = isKnown(value);
@@ -985,7 +983,7 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor, hard }) {
   const border = on ? "#2A4A3E" : tutor ? "rgba(192,140,255,0.5)" : isNext ? "#6FA8FF" : "#1E2530";
   const bg = on ? "rgba(61,220,151,0.06)" : tutor ? "rgba(192,140,255,0.07)" : isNext ? "rgba(46,111,242,0.08)" : "#0F131B";
   return (
-    <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+    <div style={{ display: "flex", gap: 6 }}>
       <button onClick={() => toggleWeek(i.id)} aria-label={`${i.lesson}${on ? ", done" : tutor ? ", for tutor" : ""}`}
         style={{ ...S.weekRow, marginBottom: 0, flex: 1, borderColor: border, background: bg }}>
         <span style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: on ? "#3DDC97" : tutor ? TUTOR_COLOR : "#3A4356", background: on ? "#3DDC97" : "transparent" }}>
@@ -998,7 +996,6 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor, hard }) {
           </span>
           {i.topic && <span style={{ ...S.body, fontSize: 12.5, color: on ? "#3A4356" : "#C9D2E0", display: "block", marginTop: 2 }}>{i.topic}</span>}
           {!on && i.text && <span style={{ ...S.body, fontSize: 12, color: "#8A94A8", display: "block", marginTop: 2, lineHeight: 1.45 }}>{i.text}</span>}
-          {tutor && hard && <span style={{ ...S.body, fontSize: 12, color: TUTOR_COLOR, display: "block", marginTop: 2 }}>📝 “{hard}”</span>}
           {i.tag && !on && !tutor && <span style={{ ...S.mono, fontSize: 9.5, color: TAGS[i.tag].color, display: "block", marginTop: 4 }}>{TAGS[i.tag].label}</span>}
         </span>
         <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, alignSelf: "center" }}>
@@ -1017,7 +1014,7 @@ function PlanRow({ i, toggleWeek, value, isNext, showTutor, hard }) {
   );
 }
 
-// "X left · Y days to the test · 2 a day = done by ..." for the Today card and Test List.
+// "X left · Y days to the test · 2 a day = done by ..." for the Today card and Lessons tab.
 function addDays(key, n) {
   const [y, m, d] = key.split("-").map(Number);
   return dateKeyFor(new Date(y, m - 1, d + n));
@@ -1159,38 +1156,127 @@ async function syncReport(weekDone, todayKey, times, notes) {
   return report(p);
 }
 
-// ---- TEST LIST tab ---------------------------------------------------
-// Everything left for the test. Done items stay crossed off. Math that's too
-// hard gets sent to the tutor's list instead of being skipped.
-function TestListTab({ weekDone, toggleWeek, todayKey, notes = [] }) {
-  const List = ({ title, items, note }) => {
-    const next = nextIn(items, weekDone);
-    const count = items.filter((i) => isDone(weekDone[i.id])).length;
-    return (
-      <div style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 6px" }}>
-          <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</span>
-          <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length}</span>
-        </div>
-        {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-        {items.map((i) => (
-          <PlanRow key={i.id} i={i} value={weekDone[i.id]} isNext={next && next.id === i.id}
-            toggleWeek={toggleWeek} showTutor hard={hardNote(notes, i.id)} />
-        ))}
-      </div>
-    );
-  };
-  const m = KAPLAN_PLAN.math;
+// ---- LESSONS tab -------------------------------------------------------
+// Every lesson left for the test, in book order, with everything about it in
+// one row: done or not, Ask tutor, and his notes on it ("#3, #7"). He jumps
+// around with his tutor, so this is where he marks whatever he did. Done
+// lessons stay crossed off; nothing is skipped.
+function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNoteDone, deleteNote }) {
+  const rowProps = { weekDone, toggleWeek, notes, addNote, toggleNoteDone };
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text={`EVERYTHING FOR THE TEST · ${shortDate(TEST_DATE).toUpperCase()}`} />
+      <SectionLabel text={`ALL LESSONS · TEST ${shortDate(TEST_DATE).toUpperCase()}`} />
       <p style={{ ...S.body, fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "0 2px 0" }}>
-        All right → <b>✓</b>. Some wrong → <b>👨‍🏫 Ask tutor</b>.
+        All right → tap it <b>✓</b>. Some wrong → <b>👨‍🏫 Ask tutor</b> and write which ones.
       </p>
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} notes={notes} />
-      <List title="📐 Math" items={m} />
-      <List title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." />
+      <LessonList title="📐 Math" items={KAPLAN_PLAN.math} {...rowProps} />
+      <LessonList title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." {...rowProps} />
+      <GoneOver notes={notes} toggleNoteDone={toggleNoteDone} />
+      <OtherNotes notes={notes} addNote={addNote} deleteNote={deleteNote} />
+    </div>
+  );
+}
+
+// One subject's lessons. A top-level component (not one made inside
+// LessonsTab) so a half-typed note isn't wiped when the screen redraws.
+function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
+  const next = nextIn(items, weekDone);
+  const count = items.filter((i) => isDone(weekDone[i.id])).length;
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 6px" }}>
+        <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</span>
+        <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length}</span>
+      </div>
+      {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
+      {items.map((i) => (
+        <div key={i.id} style={{ marginBottom: 6 }}>
+          <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
+          <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Under each lesson: his open notes ("📝 #3, #7"), each with ✓ gone over once
+// the tutor has covered it, and "+ note" to flag a question. A lesson sent to
+// the tutor with no note yet asks what was hard right away.
+function LessonNotes({ i, notes, addNote, toggleNoteDone, ask }) {
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState("");
+  const open = notes.filter((n) => n.lessonId === i.id && !n.done);
+  const showInput = adding || (ask && open.length === 0);
+  const save = () => { if (!text.trim()) return; addNote(text, i.id); setText(""); setAdding(false); };
+  return (
+    <div style={{ margin: "3px 0 0 30px" }}>
+      {open.map((n) => (
+        <div key={n.id} style={S.lessonNote}>
+          <span style={{ flex: 1, minWidth: 0, wordBreak: "break-word" }}>📝 {n.text} <span style={{ ...S.mono, fontSize: 9.5, color: "#7A6A99" }}>{n.stamp}</span></span>
+          <button onClick={() => toggleNoteDone(n.id)} aria-label={`Gone over: ${i.lesson}`} style={S.goneBtn}>✓ gone over</button>
+        </div>
+      ))}
+      {showInput ? (
+        <div style={{ display: "flex", gap: 6, marginTop: 3 }}>
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+            placeholder={ask ? "What's hard? e.g. #3, #7" : "Flag a question, e.g. #5"} aria-label={`What's hard in ${i.lesson}`}
+            style={{ ...S.noteInput, padding: "7px 9px", fontSize: 12.5 }} />
+          <button onClick={save} disabled={!text.trim()} aria-label={`Save note for ${i.lesson}`} style={{ ...S.noteAdd(!!text.trim()), padding: "7px 10px", fontSize: 11 }}>SAVE</button>
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)} aria-label={`Add note to ${i.lesson}`} style={S.addNoteBtn}>+ note</button>
+      )}
+    </div>
+  );
+}
+
+// Notes the tutor already went over, folded away (tap ✓ again to bring one back).
+function GoneOver({ notes, toggleNoteDone }) {
+  const [show, setShow] = useState(false);
+  const gone = notes.filter((n) => n.lessonId && n.done);
+  if (gone.length === 0) return null;
+  return (
+    <div style={{ marginTop: 14 }}>
+      <button onClick={() => setShow(!show)} style={{ ...S.mono, fontSize: 10, color: "#7A8598", background: "none", border: "none", cursor: "pointer", padding: "4px 2px" }}>
+        {show ? "▴" : "▾"} GONE OVER WITH THE TUTOR ({gone.length})
+      </button>
+      {show && gone.map((n) => {
+        const item = lessonById(n.lessonId);
+        return (
+          <div key={n.id} style={{ ...S.noteRow, opacity: 0.65 }}>
+            <span style={{ flex: 1, ...S.body, fontSize: 12.5, color: "#C9D2E0" }}>{item ? `${item.lesson}: ` : ""}{n.text} <span style={{ ...S.mono, fontSize: 9.5, color: "#556075" }}>{n.stamp}</span></span>
+            <button onClick={() => toggleNoteDone(n.id)} aria-label={`Not done: ${item ? item.lesson : ""}`} style={S.goneBtn}>↺</button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Notes about anything else (packet questions, class stuff). Old notes land here.
+function OtherNotes({ notes, addNote, deleteNote }) {
+  const [text, setText] = useState("");
+  const other = notes.filter((n) => !n.lessonId);
+  const add = () => { addNote(text); setText(""); };
+  return (
+    <div style={{ marginTop: 18 }}>
+      <SectionLabel text="OTHER NOTES" />
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+          placeholder="e.g. packet Q14 made no sense" style={S.noteInput} />
+        <button onClick={add} disabled={!text.trim()} style={S.noteAdd(!!text.trim())}>ADD</button>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        {other.map((n) => (
+          <div key={n.id} style={S.noteRow}>
+            <span style={{ ...S.mono, fontSize: 9.5, color: "#556075", whiteSpace: "nowrap", marginTop: 2 }}>{n.stamp}</span>
+            <span style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", flex: 1, lineHeight: 1.5, wordBreak: "break-word" }}>{n.text}</span>
+            <button onClick={() => deleteNote(n.id)} style={{ background: "none", border: "none", color: "#3A4356", cursor: "pointer", fontSize: 13, padding: "0 2px" }} aria-label="Delete note">✕</button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1315,62 +1401,8 @@ function SectionLabel({ text }) {
   return <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "2px 0 10px" }}>{text}</div>;
 }
 
-// ---- NOTES tab ---------------------------------------------------------
-// Top: what he said is hard, as a to-do list for the tutor. He (or the tutor)
-// checks one off once they've gone over it. Below: notes about anything else.
-function NotesTab({ notes, addNote, toggleNoteDone, deleteNote }) {
-  const [text, setText] = useState("");
-  const [showDone, setShowDone] = useState(false);
-  const lesson = notes.filter((n) => n.lessonId && !n.done);
-  const gone = notes.filter((n) => n.lessonId && n.done);
-  const other = notes.filter((n) => !n.lessonId);
-  const Row = ({ n, check }) => {
-    const item = lessonById(n.lessonId);
-    return (
-      <div style={{ ...S.noteRow, opacity: n.done ? 0.6 : 1 }}>
-        {check && (
-          <button onClick={() => toggleNoteDone(n.id)} aria-label={`${n.done ? "Not done" : "Gone over"}: ${item ? item.lesson : ""}`}
-            style={{ ...S.checkbox, width: 20, height: 20, minWidth: 20, borderColor: n.done ? "#3DDC97" : TUTOR_COLOR, background: n.done ? "#3DDC97" : "transparent", cursor: "pointer", marginTop: 1 }}>
-            {n.done && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</span>}
-          </button>
-        )}
-        <span style={{ flex: 1, minWidth: 0 }}>
-          {item && <span style={{ ...S.display, fontSize: 13.5, color: "#E8ECF4", display: "block" }}>{item.subj === "Math" ? "📐" : "📖"} {item.lesson} · {item.topic}</span>}
-          <span style={{ ...S.body, fontSize: 12.5, color: item ? TUTOR_COLOR : "#C9D2E0", display: "block", marginTop: item ? 2 : 0, lineHeight: 1.5, wordBreak: "break-word" }}>
-            {item ? "Guri said this is hard: " : ""}{n.text}
-          </span>
-          <span style={{ ...S.mono, fontSize: 9.5, color: "#556075" }}>{n.stamp}</span>
-        </span>
-        <button onClick={() => deleteNote(n.id)} style={{ background: "none", border: "none", color: "#3A4356", cursor: "pointer", fontSize: 13, padding: "0 2px" }} aria-label="Delete note">✕</button>
-      </div>
-    );
-  };
-  return (
-    <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text="👨‍🏫 ASK YOUR TUTOR" />
-      {lesson.length === 0
-        ? <p style={{ ...S.body, fontSize: 12.5, color: "#556075", margin: "0 2px 6px" }}>Nothing yet. When you tap 👨‍🏫 Ask tutor, write what was hard and it shows up here.</p>
-        : lesson.map((n) => <Row key={n.id} n={n} check />)}
-      {gone.length > 0 && (
-        <button onClick={() => setShowDone(!showDone)} style={{ ...S.mono, fontSize: 10, color: "#7A8598", background: "none", border: "none", cursor: "pointer", padding: "4px 2px" }}>
-          {showDone ? "▴" : "▾"} GONE OVER ({gone.length})
-        </button>
-      )}
-      {showDone && gone.map((n) => <Row key={n.id} n={n} check />)}
-
-      <div style={{ marginTop: 18 }}><SectionLabel text="OTHER NOTES" /></div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { addNote(text); setText(""); } }}
-          placeholder="e.g. packet Q14 made no sense" style={S.noteInput} />
-        <button onClick={() => { addNote(text); setText(""); }} disabled={!text.trim()} style={S.noteAdd(!!text.trim())}>ADD</button>
-      </div>
-      <div style={{ marginTop: 10 }}>{other.map((n) => <Row key={n.id} n={n} />)}</div>
-    </div>
-  );
-}
-
 // Under a lesson he sent to the tutor: a box to say what was hard. Once it's
-// saved, the note shows instead (and lives in the Notes tab).
+// saved, the note shows instead (it's also under the lesson on the Lessons tab).
 function HardNote({ i, notes, addNote }) {
   const [text, setText] = useState("");
   const saved = notes.find((n) => n.lessonId === i.id && !n.done);
@@ -1496,6 +1528,9 @@ const S = {
   noteRow: { display: "flex", gap: 10, alignItems: "flex-start", background: "#0F131B", border: "1px solid #1E2530", borderRadius: 10, padding: "10px 12px", marginBottom: 7 },
   noteInput: { fontFamily: "'Inter', sans-serif", flex: 1, fontSize: 13, color: "#E8ECF4", background: "#12161F", border: "1px solid #1E2530", borderRadius: 8, padding: "10px 11px", outline: "none", minWidth: 0 },
   noteAdd: (on) => ({ fontFamily: "'Chakra Petch', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: 1, color: on ? "#0B0E14" : "#556075", background: on ? "#6FA8FF" : "#1E2530", border: "none", borderRadius: 8, padding: "10px 14px", cursor: on ? "pointer" : "default" }),
+  lessonNote: { display: "flex", gap: 8, alignItems: "center", fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#D9C2FF", background: "rgba(192,140,255,0.07)", border: "1px solid rgba(192,140,255,0.3)", borderRadius: 8, padding: "6px 8px", marginTop: 3 },
+  goneBtn: { fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "#6FE3B4", background: "none", border: "1px solid #2A4A3E", borderRadius: 6, padding: "3px 6px", cursor: "pointer", whiteSpace: "nowrap" },
+  addNoteBtn: { fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: "1px 0" },
   tutorBox: { marginTop: 10, padding: "9px 11px", borderRadius: 10, border: "1px solid rgba(192,140,255,0.35)", background: "rgba(192,140,255,0.07)", fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#D9C2FF" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },

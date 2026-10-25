@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 24 versions based on how he actually used it.
+through 25 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -30,11 +30,11 @@ nag him.
 - **Study timers that keep counting with the screen off.** They save real
   start / break / stop times, so locking the phone or closing the app never
   loses time.
-- **A Test List** of every lesson left before the test, in book order with
-  page numbers, and his weak spots tagged from his practice-test results.
-  "Next" is always the lesson after the furthest one he's done, so it follows
-  his tutor. If he gets some wrong, one tap puts the lesson on a list for his
-  tutor instead of skipping it.
+- **A Lessons tab** with every lesson left before the test, in book order with
+  page numbers, and his weak spots tagged from his practice-test results. Each
+  lesson is one row with everything about it: done or not, "Ask tutor," and
+  his notes on it ("#3, #7"). "Next" is always the lesson after the furthest
+  one he's done, so it follows his tutor.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.
 - **Progress reports to me.** Each lesson he finishes or sends to the tutor,
@@ -42,9 +42,10 @@ nag him.
   can see how he's doing without asking.
 - **A phone-time cap** (2.5 hours max, aim for under 2).
 - **His steps on every lesson card,** three short lines for Math and for ELA.
-- **A Notes tab.** When he taps "Ask tutor," he writes what was hard, and it
-  becomes a to-do list for his tutor ("Guri said this is hard: #3, #7") until
-  it's checked off. Other notes go there too.
+- **Notes on lessons.** When he taps "Ask tutor," he writes what was hard, and
+  it stays under that lesson as a to-do for his tutor until it's checked off
+  as gone over. He can flag a question on any lesson, and other notes go at
+  the bottom of the Lessons tab.
 - **A backup code,** so his history can move to a new version of the app.
 
 ## The hard part: figuring out what he actually needed

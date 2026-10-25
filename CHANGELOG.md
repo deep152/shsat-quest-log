@@ -30,7 +30,8 @@ from watching my brother actually use it. Each version's full code is in
 | 21 | Oct 24 | [Follows the tutor](versions/2026-10-24-v21-follows-the-tutor.jsx) |
 | 22 | Oct 24 | [Progress reports](versions/2026-10-24-v22-progress-reports.jsx) |
 | 23 | Oct 24 | [Topics and the 4-of-5 rule](versions/2026-10-24-v23-topics.jsx) |
-| 24 | Oct 24 | [His steps + Notes tab (current)](versions/2026-10-24-v24-steps-and-notes.jsx) |
+| 24 | Oct 24 | [His steps + Notes tab](versions/2026-10-24-v24-steps-and-notes.jsx) |
+| 25 | Oct 25 | [One Lessons tab (current)](versions/2026-10-25-v25-lessons-tab.jsx) |
 
 ---
 
@@ -243,7 +244,7 @@ works, and nothing changes for him.
 was about, and "easy?" was a judgment call he couldn't make. The jump from
 4.3 to 4.6 also looked like lessons were missing.
 
-### v24 · Oct 24 · His steps + Notes tab (current)
+### v24 · Oct 24 · His steps + Notes tab
 - Every lesson card lists the steps I gave him, in plain words. Math: go
   through the lesson, do the Perform set, circle wrong ones and ask the tutor.
   ELA: read the lesson till he gets it, do the topic test at the end,
@@ -260,3 +261,16 @@ was about, and "easy?" was a judgment call he couldn't make. The jump from
 **Why:** the YouTube results weren't useful, and the rule was mine, not his
 method. What helps is knowing exactly which questions he missed, so the tutor
 can start there.
+
+### v25 · Oct 25 · One Lessons tab (current)
+- The Test List and the Notes tab became one **Lessons** tab. Each lesson's
+  notes sit right under it, each with **✓ gone over** for after the tutor
+  covers it.
+- Any lesson can get a note ("+ note"), not only ones sent to the tutor, so he
+  can flag a single question.
+- Notes the tutor went over fold into a "Gone over" list. Other notes are at
+  the bottom of the tab.
+- Three tabs now: Today, Lessons, Calendar.
+
+**Why:** he jumps around the book with his tutor, so everything about a lesson
+should be in one place instead of split across two tabs.
