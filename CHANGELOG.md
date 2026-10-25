@@ -31,7 +31,8 @@ from watching my brother actually use it. Each version's full code is in
 | 22 | Oct 24 | [Progress reports](versions/2026-10-24-v22-progress-reports.jsx) |
 | 23 | Oct 24 | [Topics and the 4-of-5 rule](versions/2026-10-24-v23-topics.jsx) |
 | 24 | Oct 24 | [His steps + Notes tab](versions/2026-10-24-v24-steps-and-notes.jsx) |
-| 25 | Oct 25 | [One Lessons tab (current)](versions/2026-10-25-v25-lessons-tab.jsx) |
+| 25 | Oct 25 | [One Lessons tab](versions/2026-10-25-v25-lessons-tab.jsx) |
+| 26 | Oct 25 | [Pick a lesson (current)](versions/2026-10-25-v26-pick-a-lesson.jsx) |
 
 ---
 
@@ -262,7 +263,7 @@ was about, and "easy?" was a judgment call he couldn't make. The jump from
 method. What helps is knowing exactly which questions he missed, so the tutor
 can start there.
 
-### v25 · Oct 25 · One Lessons tab (current)
+### v25 · Oct 25 · One Lessons tab
 - The Test List and the Notes tab became one **Lessons** tab. Each lesson's
   notes sit right under it, each with **✓ gone over** for after the tutor
   covers it.
@@ -274,3 +275,13 @@ can start there.
 
 **Why:** he jumps around the book with his tutor, so everything about a lesson
 should be in one place instead of split across two tabs.
+
+### v26 · Oct 25 · Pick a lesson (current)
+- ‹ › arrows on each Today card let him switch to a different open lesson
+  before he starts it, with "↺ back to next" to undo. Once he taps ✓ or Ask
+  tutor on it, the card picks up right after it.
+- The header says GURIE, the way he spells it. The line at the bottom just
+  says "lock in."
+
+**Why:** the card only showed the next lesson in the book, but some days the
+tutor plans a different one. Switching used to mean going to the Lessons tab.
