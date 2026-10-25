@@ -14,13 +14,16 @@ on his phone every day, so **never break his saved progress**.
 - `index.html`: what GitHub Pages serves. It's the `.jsx` pasted into a page (see below).
 - `versions/`: old versions, kept for history. Never edit them.
 - `CHANGELOG.md`: every change gets an entry with **what** changed and **why**.
+- `progress-sheet/Code.gs`: the Google Apps Script behind the progress Sheet.
+  It's deployed by hand from the Sheet, so a change here means a new deployment.
 
 ## Rules
 
 1. **Never rename ids or storage keys.** Task ids (`m4`, `e1`, …) and storage
    keys (`guri-day:*`, `guri-study:*`, `guri-kaplanweek:2026-10-12`,
-   `guri-completed-dates`, `guri-notes`, `guri-khansq:*`) are how his progress
-   is saved. Renaming one silently wipes his history. New things get new ids.
+   `guri-completed-dates`, `guri-notes`, `guri-khansq:*`, `guri-report-queue`,
+   `guri-report-last`) are how his progress is saved. Renaming one silently
+   wipes his history. New things get new ids.
 2. **Old saved data has to keep working.** Example: checks used to be saved as
    `true` and are now saved as a date. Both still count as done. A lesson can
    also be `tutor:<date>` (sent to his tutor, not done yet) or
@@ -37,7 +40,10 @@ on his phone every day, so **never break his saved progress**.
 7. **Test before pushing.** Serve `index.html` locally, open it at phone width
    (390px), and check that: it renders, checking an item survives a reload,
    every tab opens, and the console shows no errors.
-8. **Write for a 13-year-old.** Short labels, no jargon. Code comments explain *why*, not what.
+8. **Progress reports never get in his way.** The app only sends; it never
+   waits on a report or shows an error when one fails. If an update's shape
+   changes, change `valid()` in `Code.gs` to match.
+9. **Write for a 13-year-old.** Short labels, no jargon. Code comments explain *why*, not what.
 
 ## Updating the plan
 

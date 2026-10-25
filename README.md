@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 21 versions based on how he actually used it.
+through 22 versions based on how he actually used it.
 
 ## Why this exists
 
@@ -37,6 +37,9 @@ nag him.
   instead of skipping it.
 - **A calendar** showing each day's study time and lessons finished,
   color-coded. Tap a day to see what got done.
+- **Progress reports to me.** Each lesson he finishes or sends to the tutor
+  goes to a Google Sheet and emails me, so I can see how he's doing without
+  asking.
 - **A phone-time cap** (2.5 hours max, aim for under 2).
 - **A How to tab** with his study method in four short steps.
 - **Notes and a backup code,** so questions don't get forgotten and his
@@ -119,6 +122,11 @@ A few of the actual bugs, not all of them:
 - **The browser's storage instead of a backend.** It has one user on one
   phone, so a server and a database would be overkill. Saved data lives in
   `localStorage`.
+- **One-way reports instead of a full sync.** I only need to see his progress,
+  not change it. So the app sends each update to a Google Apps Script web app
+  that writes a Sheet and emails me. He doesn't log in, and his phone stays the
+  source of truth. Every update carries the whole lesson list, so one lost
+  update can't leave the Sheet wrong.
 - **The plan is data, not code.** The lessons are a plain array of objects.
   Changing his plan means editing a list, not touching any components.
 - **Stable ids and storage keys.** Task ids and storage keys stay the same
@@ -138,6 +146,7 @@ React project outside of coursework.
 - JSX
 - Plain JavaScript objects for styling (no CSS framework)
 - `localStorage` for saving
+- Google Apps Script and Google Sheets for the progress reports
 - GitHub Pages hosting: React and Babel load from a CDN at pinned versions and
   the JSX is compiled in the browser. For a bigger app I'd use a real build
   step (like Vite) instead.

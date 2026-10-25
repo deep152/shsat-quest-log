@@ -236,6 +236,17 @@ export default function GuriQuestLog() {
     return () => clearInterval(id);
   }, [running, spamming]);
 
+  // Quiet progress update (see REPORT_URL): when the app opens, after changes,
+  // and when he switches away, which is when today's Kaplan time matters most.
+  // Skipped when nothing changed since the last one.
+  useEffect(() => {
+    if (!loaded || !REPORT_URL) return;
+    syncReport(weekDone, dateKey, times);
+    const onHide = () => { if (document.visibilityState === "hidden") syncReport(weekDone, dateKey, times); };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [loaded, weekDone, times, dateKey]);
+
   // keep the calendar's cleared-days list in sync. An effect instead of a click
   // handler because the Kaplan goal can get hit just by time passing.
   useEffect(() => {
@@ -293,6 +304,8 @@ export default function GuriQuestLog() {
     else if (mode === "undo") delete next[id];
     else if (cur && !isTutor(cur)) delete next[id];        // tap a done one again = undo
     else next[id] = dateKey;                               // tap an open or tutor one = done
+    const item = [...KAPLAN_PLAN.math.map((i) => ({ ...i, subj: "Math" })), ...KAPLAN_PLAN.ela.map((i) => ({ ...i, subj: "ELA" }))].find((i) => i.id === id);
+    if (item) lessonReport({ action: mode === "tutor" ? "tutor" : next[id] ? "done" : "undo", subj: item.subj, lesson: item.lesson }, next, dateKey, times);
     setWeekDone(next);
     try { await window.storage.set(`guri-kaplanweek:${KAPLAN_PLAN.id}`, JSON.stringify(next)); } catch (e) {}
   }
@@ -1072,6 +1085,95 @@ function nextIn(items, weekDone) {
   return items.slice(last + 1).find((i) => !weekDone[i.id]) || items.find((i) => !weekDone[i.id]) || null;
 }
 
+// What he saved for the tutor, short: ["📐 11.2", "📖 5.1"], math first.
+function tutorItems(weekDone) {
+  const short = (i) => i.lesson.replace("Lesson ", "");
+  return [
+    ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => `📐 ${short(i)}`),
+    ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => `📖 ${short(i)}`),
+  ];
+}
+
+// ---- progress report to Depinder's Google Sheet -------------------------
+// So his brother can see his progress without asking. Every ✓ / Too hard /
+// undo sends an update to a Google Apps Script web app (progress-sheet/Code.gs),
+// which writes it to a Google Sheet and emails him. A quiet update (no email)
+// also goes out when the app opens or he leaves it, so the Sheet has today's
+// Kaplan time. Each update carries the whole lesson list, so the Sheet always
+// matches the phone even if one update gets lost. Offline? It waits in a queue
+// and goes out next time. Empty REPORT_URL = reporting off.
+const REPORT_URL = "";
+const REPORT_QUEUE_KEY = "guri-report-queue";
+const REPORT_LAST_KEY = "guri-report-last";
+
+function buildReport(kind, event, weekDone, todayKey, byCat) {
+  const status = (v) => (!v ? "Open" : isTutor(v) ? "For tutor" : isKnown(v) ? "Done (knew it)" : "Done");
+  const rows = (items, subj) => {
+    const nx = nextIn(items, weekDone);
+    return items.map((i) => [subj, i.lesson, i.page || "", status(weekDone[i.id]), doneDay(weekDone[i.id]) || "", nx && nx.id === i.id ? "Next" : ""]);
+  };
+  const all = [...KAPLAN_PLAN.math, ...KAPLAN_PLAN.ela];
+  const nm = nextIn(KAPLAN_PLAN.math, weekDone), ne = nextIn(KAPLAN_PLAN.ela, weekDone);
+  const short = (i) => i.lesson.replace("Lesson ", "");
+  return {
+    v: 1, kind, event, at: Date.now(), today: todayKey,
+    kaplan: { math: Math.round(byCat.math / 60000), ela: Math.round(byCat.ela / 60000) },
+    lessons: [...rows(KAPLAN_PLAN.math, "Math"), ...rows(KAPLAN_PLAN.ela, "ELA")],
+    summary: {
+      left: all.filter((i) => !isDone(weekDone[i.id])).length,
+      handledToday: all.filter((i) => { const v = weekDone[i.id]; return v && !isKnown(v) && doneDay(v) === todayKey; }).length,
+      tutor: tutorItems(weekDone).join(", "),
+      next: [nm && `Math ${short(nm)}`, ne && `ELA ${short(ne)}`].filter(Boolean).join(" · ") || "nothing left",
+      daysLeft: daysUntil(todayKey, TEST_DATE),
+    },
+  };
+}
+
+// One send at a time, in order, so the Sheet always ends on the newest state.
+let reportChain = Promise.resolve();
+let lastSig = null; // what was last sent; also saved so reopening doesn't resend it
+function report(payload) {
+  reportChain = reportChain.then(() => flushReports(payload)).catch(() => {});
+  return reportChain;
+}
+async function flushReports(payload) {
+  let queue = [];
+  try { const q = await window.storage.get(REPORT_QUEUE_KEY); if (q?.value) queue = JSON.parse(q.value); } catch (e) {}
+  // every update has the full state, so a waiting quiet one is replaced by any newer one
+  queue = [...queue.filter((p) => p.kind === "lesson"), payload].slice(-30);
+  const unsent = [];
+  for (const p of queue) {
+    if (unsent.length) { unsent.push(p); continue; } // keep the order: stop at the first failure
+    try {
+      // no-cors + text/plain is the one kind of request Apps Script accepts from a page
+      await fetch(REPORT_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(p) });
+    } catch (e) { unsent.push(p); }
+  }
+  try { await window.storage.set(REPORT_QUEUE_KEY, JSON.stringify(unsent)); } catch (e) {}
+}
+const reportSig = (p) => JSON.stringify([p.today, p.kaplan, p.lessons]);
+function rememberSig(sig) {
+  lastSig = sig;
+  try { window.storage.set(REPORT_LAST_KEY, sig).catch(() => {}); } catch (e) {}
+}
+function lessonReport(event, weekDone, todayKey, times) {
+  if (!REPORT_URL) return;
+  const p = buildReport("lesson", event, weekDone, todayKey, readStudy(times.study, Date.now()).byCat);
+  rememberSig(reportSig(p));
+  return report(p);
+}
+async function syncReport(weekDone, todayKey, times) {
+  if (!REPORT_URL) return;
+  const p = buildReport("sync", null, weekDone, todayKey, readStudy(times.study, Date.now()).byCat);
+  if (lastSig === null) {
+    try { const r = await window.storage.get(REPORT_LAST_KEY); lastSig = r?.value || ""; } catch (e) { lastSig = ""; }
+  }
+  const sig = reportSig(p);
+  if (sig === lastSig) return; // nothing new since the last update
+  rememberSig(sig);
+  return report(p);
+}
+
 // ---- TEST LIST tab ---------------------------------------------------
 // Everything left for the test. Done items stay crossed off. Math that's too
 // hard gets sent to the tutor's list instead of being skipped.
@@ -1109,11 +1211,7 @@ function TestListTab({ weekDone, toggleWeek, todayKey }) {
 
 // What he saved for the tutor, as one short line: math first, then ELA.
 function TutorList({ weekDone }) {
-  const short = (i) => i.lesson.replace("Lesson ", "");
-  const list = [
-    ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => `📐 ${short(i)}`),
-    ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => `📖 ${short(i)}`),
-  ];
+  const list = tutorItems(weekDone);
   if (list.length === 0) return null;
   return (
     <div style={S.tutorBox}>

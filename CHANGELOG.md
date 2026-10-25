@@ -27,7 +27,8 @@ from watching my brother actually use it. Each version's full code is in
 | 18 | Oct 23 | [Bonus lessons](versions/2026-10-23-v18-bonus-lessons.jsx) |
 | 19 | Oct 23 | [Math + ELA lanes](versions/2026-10-23-v19-lanes.jsx) |
 | 20 | Oct 24 | [ELA at home, tutor for what he missed](versions/2026-10-24-v20-ela-at-home.jsx) |
-| 21 | Oct 24 | [Follows the tutor (current)](versions/2026-10-24-v21-follows-the-tutor.jsx) |
+| 21 | Oct 24 | [Follows the tutor](versions/2026-10-24-v21-follows-the-tutor.jsx) |
+| 22 | Oct 24 | [Progress reports (current)](versions/2026-10-24-v22-progress-reports.jsx) |
 
 ---
 
@@ -202,7 +203,7 @@ left, without ELA stopping. And his tutor started him at Chapter 11.
 reading them during tutoring used up his tutor's time. Now the reading happens
 at home and the tutor's 90 minutes go to the questions he actually missed.
 
-### v21 · Oct 24 · Follows the tutor (current)
+### v21 · Oct 24 · Follows the tutor
 - Math is in book order from Ch 11, the way his tutor teaches it. 🎯 tags still
   mark his weak spots.
 - "Next" is now the lesson right after the furthest one he's worked on. If the
@@ -213,3 +214,16 @@ at home and the tutor's 90 minutes go to the questions he actually missed.
 **Why:** his tutor started him at Chapter 11 and goes through the book in
 order, so a weak-spots-first list kept pointing him at a lesson he'd already
 passed. The tutor decides the order now, and the app keeps up.
+
+### v22 · Oct 24 · Progress reports (current)
+- Every ✓ Done, 👨‍🏫 Too hard and undo sends a small update to a Google Sheet,
+  and I get an email for each lesson he finishes or sends to the tutor.
+- The Sheet has a summary tab (lessons left, today's lessons and Kaplan time,
+  what's next, the tutor list), the full lesson list, Kaplan minutes per day,
+  and a log of every tap.
+- A quiet update (no email) also goes out when he opens or leaves the app.
+  Updates made while he's offline wait and go out the next time.
+- The Sheet's script is in [`progress-sheet/Code.gs`](progress-sheet/Code.gs).
+
+**Why:** checking on his progress meant asking him. Now it comes to me as he
+works, and nothing changes for him.
