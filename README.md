@@ -5,7 +5,7 @@
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started
 as a checklist so he could stick to his schedule while I was away, and it went
-through 26 versions based on how he actually used it.
+through 27 versions based on how he actually used it.
 
 ## Why this exists
 

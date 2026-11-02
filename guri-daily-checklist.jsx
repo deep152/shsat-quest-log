@@ -951,6 +951,32 @@ const KAPLAN_PLAN = {
     { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", text: "Short. Read it the day before the test." },
   ],
 };
+
+// ---- Tutorverse warm-ups (added Nov 2) ------------------------------------
+// 15 minutes before Kaplan, from the second book. Short drills on what his
+// practice tests kept missing: grammar rules and arithmetic. Only the first
+// half of each set (they get harder as they go). Same ✓ / Ask tutor / notes as
+// lessons, saved in the same place, with their own ids (w1...).
+const WARMUPS = [
+  { id: "w1",  lesson: "Modifiers", page: "Tutorverse p.50", topic: "Grammar", text: "" },
+  { id: "w2",  lesson: "Subject-Verb Agreement", page: "Tutorverse p.55", topic: "Grammar", text: "" },
+  { id: "w3",  lesson: "Fractions", page: "Tutorverse p.189", topic: "Math", text: "" },
+  { id: "w4",  lesson: "Tenses & Pronouns", page: "Tutorverse p.52, 49", topic: "Grammar", text: "" },
+  { id: "w5",  lesson: "Comma splices", page: "Tutorverse p.60", topic: "Grammar · Subordination & Coordination", text: "" },
+  { id: "w6",  lesson: "Percents", page: "Tutorverse p.185", topic: "Math", text: "" },
+  { id: "w7",  lesson: "Factors, Exponents & Radicals", page: "Tutorverse p.197", topic: "Math", text: "" },
+  { id: "w8",  lesson: "Punctuation", page: "Tutorverse p.62, 66", topic: "Grammar", text: "" },
+  { id: "w9",  lesson: "Equations", page: "Tutorverse p.211", topic: "Math", text: "" },
+  { id: "w10", lesson: "Inequalities", page: "Tutorverse p.219", topic: "Math", text: "" },
+  { id: "w11", lesson: "Probability", page: "Tutorverse p.226", topic: "Math", text: "" },
+  { id: "w12", lesson: "Imaginary Operations", page: "Tutorverse p.205", topic: "Math", text: "" },
+  { id: "w13", lesson: "Scientific Notation", page: "Tutorverse p.201", topic: "Math", text: "" },
+  { id: "w14", lesson: "Final Practice Test (Form B)", page: "Tutorverse p.264", topic: "Full test", text: "Around Nov 11–13. Timed, in order, no going back. Not the day before the test." },
+  { id: "w15", lesson: "Numbers & Operations mixed", page: "Tutorverse p.207", topic: "Math review", text: "" },
+  { id: "w16", lesson: "Algebra mixed", page: "Tutorverse p.222", topic: "Math review", text: "" },
+  { id: "w17", lesson: "Probability & Stats mixed", page: "Tutorverse p.234", topic: "Math review", text: "" },
+  { id: "w18", lesson: "Geometry mixed", page: "Tutorverse p.260", topic: "Math review", text: "" },
+];
 // helpers for the saved values
 const isKnown = (v) => typeof v === "string" && v.startsWith("know:");
 const isTutor = (v) => typeof v === "string" && v.startsWith("tutor:"); // "too hard, do it with the tutor"
@@ -1053,7 +1079,9 @@ function lessonById(id) {
   const m = KAPLAN_PLAN.math.find((i) => i.id === id);
   if (m) return { ...m, subj: "Math" };
   const e = KAPLAN_PLAN.ela.find((i) => i.id === id);
-  return e ? { ...e, subj: "ELA" } : null;
+  if (e) return { ...e, subj: "ELA" };
+  const w = WARMUPS.find((i) => i.id === id);
+  return w ? { ...w, subj: "Warm-up" } : null;
 }
 
 // What he said is hard about one lesson (open notes only), joined.
@@ -1172,6 +1200,7 @@ function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNote
       <TutorList weekDone={weekDone} notes={notes} />
       <LessonList title="📐 Math" items={KAPLAN_PLAN.math} {...rowProps} />
       <LessonList title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." {...rowProps} />
+      <LessonList title="📝 Tutorverse warm-ups" items={WARMUPS} note="15 min before Kaplan. First half of each set only." {...rowProps} />
       <GoneOver notes={notes} toggleNoteDone={toggleNoteDone} />
       <OtherNotes notes={notes} addNote={addNote} deleteNote={deleteNote} />
     </div>
@@ -1333,8 +1362,42 @@ function TodayCard({ weekDone, toggleWeek, todayKey, notes, addNote }) {
       <Lane title="📖 ELA" today={eToday} next={eNext} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote}
         note={eToday.length ? `✓ ${eToday.length} today` : elaDue ? "1 due today" : "if you have time"} />
 
+      <Warmup weekDone={weekDone} toggleWeek={toggleWeek} todayKey={todayKey} />
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} notes={notes} />
+    </div>
+  );
+}
+
+// The 15-minute Tutorverse warm-up: today's finished ones crossed off, then
+// the next one with ✓ / Ask tutor. Not part of "Do 2 today".
+function Warmup({ weekDone, toggleWeek, todayKey }) {
+  const today = WARMUPS.filter((i) => { const v = weekDone[i.id]; return v && doneDay(v) === todayKey; });
+  const next = nextIn(WARMUPS, weekDone);
+  if (!next && today.length === 0) return null;
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598", margin: "0 2px" }}>📝 WARM-UP · 15 MIN · FIRST HALF OF THE SET</div>
+      {today.map((i) => (
+        <div key={i.id} style={S.extraRow}>
+          <span style={{ ...S.display, fontSize: 14, color: isTutor(weekDone[i.id]) ? TUTOR_COLOR : "#6FE3B4", textDecorationLine: isTutor(weekDone[i.id]) ? "none" : "line-through" }}>
+            {isTutor(weekDone[i.id]) ? "👨‍🏫" : "✓"} {i.lesson}
+          </span>
+          <button onClick={() => toggleWeek(i.id, "undo")} aria-label={`Undo ${i.lesson}`} style={S.extraUndo}>undo</button>
+        </div>
+      ))}
+      {next && (
+        <div style={{ ...S.extraRow, display: "block", borderColor: "#2A3242" }}>
+          <div style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{next.lesson}</div>
+          <div style={{ ...S.mono, fontSize: 10.5, color: "#6FA8FF", marginTop: 2 }}>{next.page}</div>
+          {next.text && <div style={{ ...S.body, fontSize: 12, color: "#8A94A8", marginTop: 3 }}>{next.text}</div>}
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button onClick={() => toggleWeek(next.id)} aria-label={`Done ${next.lesson}`} style={{ ...S.heroBtn, padding: "8px 0", fontSize: 13, background: "#3DDC97", color: "#0B0E14" }}>✓ ALL RIGHT</button>
+            <button onClick={() => toggleWeek(next.id, "tutor")} aria-label={`Tutor ${next.lesson}`}
+              style={{ ...S.heroBtn, flex: "0 0 auto", padding: "8px 12px", fontSize: 13, background: "transparent", border: `1px solid ${TUTOR_COLOR}`, color: TUTOR_COLOR }}>👨‍🏫 Ask tutor</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

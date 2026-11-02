@@ -32,9 +32,10 @@ from watching my brother actually use it. Each version's full code is in
 | 23 | Oct 24 | [Topics and the 4-of-5 rule](versions/2026-10-24-v23-topics.jsx) |
 | 24 | Oct 24 | [His steps + Notes tab](versions/2026-10-24-v24-steps-and-notes.jsx) |
 | 25 | Oct 25 | [One Lessons tab](versions/2026-10-25-v25-lessons-tab.jsx) |
-| 26 | Oct 25 | [Pick a lesson (current)](versions/2026-10-25-v26-pick-a-lesson.jsx) |
+| 26 | Oct 25 | [Pick a lesson](versions/2026-10-25-v26-pick-a-lesson.jsx) |
 | — | Oct 25 | Removed Lesson 4.7 |
 | — | Nov 2 | Progress reports switched on |
+| 27 | Nov 2 | [Tutorverse warm-ups (current)](versions/2026-11-02-v27-warm-ups.jsx) |
 
 ---
 
@@ -278,7 +279,7 @@ can start there.
 **Why:** he jumps around the book with his tutor, so everything about a lesson
 should be in one place instead of split across two tabs.
 
-### v26 · Oct 25 · Pick a lesson (current)
+### v26 · Oct 25 · Pick a lesson
 - ‹ › arrows on each Today card let him switch to a different open lesson
   before he starts it, with "↺ back to next" to undo. Once he taps ✓ or Ask
   tutor on it, the card picks up right after it.
@@ -295,3 +296,15 @@ tutor plans a different one. Switching used to mean going to the Lessons tab.
 ### Nov 2 · Progress reports switched on
 - The Google Sheet's script is deployed, and the app now sends its updates to
   it (v22). Checked end to end: an update from the page filled in the Sheet.
+
+### v27 · Nov 2 · Tutorverse warm-ups (current)
+- A 15-minute warm-up before Kaplan from a second book (The Tutorverse): short
+  drills on what his practice tests kept missing, like modifiers, subject-verb
+  agreement, fractions and percents. Then its full practice test and mixed
+  review sets for the last week.
+- It shows on the Today card under the two lessons and as its own list in the
+  Lessons tab, with the same ✓, Ask tutor and notes.
+
+**Why:** grammar rules and arithmetic are short, rule-based questions he
+missed on every practice test, so they're the fastest points to gain with
+16 days left.
