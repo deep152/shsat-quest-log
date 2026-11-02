@@ -320,3 +320,13 @@ missed on every practice test, so they're the fastest points to gain with
 **Why:** with 16 days left he can't do everything. Charts and data tables never
 came up on his practice tests, and the Tutorverse mixed sets and full practice
 test cover what Chapter 16 and the reviews would.
+- Update: Chapter 16, 18.1 and 18.2 moved to their own "Last week: mixed
+  review" group, since mixed practice is the right thing for the final days.
+  Only 15.1 and 15.2 stay under "Only if there's time."
+
+### Nov 2 · No more post-its; tutor time counts
+- The daily "Checked my answers" check now says wrong ones get circled or
+  highlighted and go in the app. Sunday's "Post-its still left" became "Went
+  over my notes" (same check, so the PS5 rule doesn't change).
+- The tutor check says to run the Math timer there: tutor time counts toward
+  his 2 hours, since he does a lesson at home and another with the tutor.

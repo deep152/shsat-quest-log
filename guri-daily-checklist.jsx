@@ -39,9 +39,9 @@ const C = {
   home:     { id: "home",     title: "Home from school",       desc: "Snack, relax, decompress." },
   schoolhw: { id: "schoolhw", title: "Homework done",          desc: "Whatever's due tomorrow." },
   schoolmon:{ id: "schoolhw", title: "Homework for Monday done", desc: "Get it out of the way." },
-  checked:  { id: "checked",  title: "Checked my answers",     desc: "Wrong ones got a post-it." },
-  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Bring the book and your 👨‍🏫 notes." },
-  postit:   { id: "postit",   title: "Post-its still left",    desc: "Redo them. Got it? Take it off." },
+  checked:  { id: "checked",  title: "Checked my answers",     desc: "Wrong ones circled or highlighted, and in the app." },
+  tutor:    { id: "tutor",    title: "Tutor 4:00–5:30",        desc: "Math. Start the 📐 Math timer: tutor time counts." },
+  postit:   { id: "postit",   title: "Went over my notes",     desc: "Anything in Lessons still hard? Bring it to the tutor." },
   kindle:   { id: "kindle",   title: "Kindle 1hr+",            desc: "No cap on this one." },
   dinner:   { id: "dinner",   title: "Dinner",                 desc: "Whenever it's ready." },
   nophone:  { id: "nophone",  title: "No phone before Khan's", desc: "Kindle in the morning is fine." },
@@ -933,8 +933,8 @@ const KAPLAN_PLAN = {
     { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479.", optional: true },
     { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487.", optional: true },
     { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", text: "Perform just before page 491." },
-    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next.", optional: true },
-    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751.", optional: true },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next.", optional: "review" },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751.", optional: "review" },
   ],
   ela: [
     { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus" },
@@ -949,7 +949,7 @@ const KAPLAN_PLAN = {
     { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", text: "" },
     { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "Just the practice questions." },
     { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "Just the practice questions." },
-    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751.", optional: true },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751.", optional: "review" },
     { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", text: "Short. Read it the day before the test." },
   ],
 };
@@ -1226,10 +1226,10 @@ function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, 
         <span style={{ ...S.mono, fontSize: 10, color: count === core.length ? "#3DDC97" : "#7A8598" }}>{count}/{core.length}</span>
       </div>
       {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional)].map((i, k, arr) => (
+      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional === "review"), ...items.filter((i) => i.optional === true)].map((i, k, arr) => (
         <div key={i.id} style={{ marginBottom: 6 }}>
-          {i.optional && (k === 0 || !arr[k - 1].optional) && (
-            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>ONLY IF THERE'S TIME</div>
+          {i.optional && (k === 0 || arr[k - 1].optional !== i.optional) && (
+            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>{i.optional === "review" ? "LAST WEEK: MIXED REVIEW" : "ONLY IF THERE'S TIME"}</div>
           )}
           <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
           <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
