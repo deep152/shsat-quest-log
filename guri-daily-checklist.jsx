@@ -1079,7 +1079,7 @@ function tutorItems(weekDone, notes = []) {
 // whole lesson list, so the Sheet always matches the phone even if one update
 // gets lost. Offline? It waits in a queue and goes out next time. Empty
 // REPORT_URL = reporting off.
-const REPORT_URL = "";
+const REPORT_URL = "https://script.google.com/macros/s/AKfycbzoCGvW5nHChbFHHFHM6i03PmTzdcqU_mv9jyLTwDKSYFqvFygi9bsI_HAW-Y4U6DqB4w/exec";
 const REPORT_QUEUE_KEY = "guri-report-queue";
 const REPORT_LAST_KEY = "guri-report-last";
 

@@ -34,6 +34,7 @@ from watching my brother actually use it. Each version's full code is in
 | 25 | Oct 25 | [One Lessons tab](versions/2026-10-25-v25-lessons-tab.jsx) |
 | 26 | Oct 25 | [Pick a lesson (current)](versions/2026-10-25-v26-pick-a-lesson.jsx) |
 | — | Oct 25 | Removed Lesson 4.7 |
+| — | Nov 2 | Progress reports switched on |
 
 ---
 
@@ -290,3 +291,7 @@ tutor plans a different one. Switching used to mean going to the Lessons tab.
 ### Oct 25 · Removed Lesson 4.7
 - Took out the "Lesson 4.7" row added in v24. The book's Chapter 4 ends at 4.6.
   He was on the topic test at the end of 4.6, not a separate lesson.
+
+### Nov 2 · Progress reports switched on
+- The Google Sheet's script is deployed, and the app now sends its updates to
+  it (v22). Checked end to end: an update from the page filled in the Sheet.
