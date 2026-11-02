@@ -410,6 +410,7 @@ function GuriQuestLog() {
       {tab === "today" && (
         <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
+      {tab === "warmup" && <WarmupTab {...{ weekDone, toggleWeek, notes, addNote, toggleNoteDone }} />}
       {tab === "todo" && <LessonsTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, toggleNoteDone, deleteNote }} />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
 
@@ -424,6 +425,7 @@ function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
     { id: "todo", label: "Lessons" },
+    { id: "warmup", label: "Warm-up" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -1234,7 +1236,6 @@ function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNote
       <TutorList weekDone={weekDone} notes={notes} />
       <LessonList title="📐 Math" items={KAPLAN_PLAN.math} {...rowProps} />
       <LessonList title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." {...rowProps} />
-      <LessonList title="📝 Tutorverse warm-ups" items={WARMUPS} note="15 min before Kaplan. First half of each set only." {...rowProps} />
       <GoneOver notes={notes} toggleNoteDone={toggleNoteDone} />
       <OtherNotes notes={notes} addNote={addNote} deleteNote={deleteNote} />
     </div>
@@ -1399,6 +1400,24 @@ function TodayCard({ weekDone, toggleWeek, todayKey, notes, addNote }) {
       <Warmup weekDone={weekDone} toggleWeek={toggleWeek} todayKey={todayKey} />
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} notes={notes} />
+    </div>
+  );
+}
+
+// ---- WARM-UP tab -------------------------------------------------------
+// Just the Tutorverse book: three plain steps, the link to its answer
+// explanations, and the list.
+function WarmupTab({ weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
+  return (
+    <div style={{ padding: "4px 16px 4px" }}>
+      <SectionLabel text="TUTORVERSE WARM-UP · 15 MIN BEFORE KAPLAN" />
+      <ol style={{ ...S.body, fontSize: 13, color: "#C9D2E0", margin: "0 0 8px", paddingLeft: 20, lineHeight: 1.6 }}>
+        <li>Do the first half of the set.</li>
+        <li>Check your answers in the back of the book (p.298).</li>
+        <li>All right → <b>✓</b>. Some wrong → <b>👨‍🏫 Ask tutor</b> and write which ones.</li>
+      </ol>
+      <a href="https://thetutorverse.com/books" target="_blank" rel="noopener noreferrer" style={S.siteLink}>📘 Answer explanations: thetutorverse.com/books</a>
+      <LessonList title="📝 Warm-ups" items={WARMUPS} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} />
     </div>
   );
 }
@@ -1651,6 +1670,7 @@ const S = {
   goneBtn: { fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "#6FE3B4", background: "none", border: "1px solid #2A4A3E", borderRadius: 6, padding: "3px 6px", cursor: "pointer", whiteSpace: "nowrap" },
   addNoteBtn: { fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "#556075", background: "none", border: "none", cursor: "pointer", padding: "1px 0" },
   stepBtn: { width: 30, height: 30, borderRadius: 8, border: "1px solid #2A3242", background: "#161B26", color: "#C9D2E0", fontSize: 18, lineHeight: "26px", cursor: "pointer", padding: 0 },
+  siteLink: { display: "block", fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#6FA8FF", textDecoration: "none", border: "1px solid #2A3242", borderRadius: 10, padding: "10px 12px", background: "#12161F" },
   tutorBox: { marginTop: 10, padding: "9px 11px", borderRadius: 10, border: "1px solid rgba(192,140,255,0.35)", background: "rgba(192,140,255,0.07)", fontFamily: "'Inter', sans-serif", fontSize: 12.5, color: "#D9C2FF" },
   todoBig: { border: "1px solid #1E2530", borderRadius: 14, background: "#12161F", padding: "16px 14px", marginBottom: 12, textAlign: "center" },
   todoNote: { fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#8A94A8", lineHeight: 1.6, margin: "6px 0 0" },

@@ -302,8 +302,9 @@ tutor plans a different one. Switching used to mean going to the Lessons tab.
   drills on what his practice tests kept missing, like modifiers, subject-verb
   agreement, fractions and percents. Then its full practice test and mixed
   review sets for the last week.
-- It shows on the Today card under the two lessons and as its own list in the
-  Lessons tab, with the same ✓, Ask tutor and notes.
+- It shows on the Today card under the two lessons and in its own Warm-up
+  tab, with three plain steps and a link to the book's answer explanations
+  online. Same ✓, Ask tutor and notes as lessons.
 
 **Why:** grammar rules and arithmetic are short, rule-based questions he
 missed on every practice test, so they're the fastest points to gain with
