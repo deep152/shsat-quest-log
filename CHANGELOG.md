@@ -36,6 +36,7 @@ from watching my brother actually use it. Each version's full code is in
 | — | Oct 25 | Removed Lesson 4.7 |
 | — | Nov 2 | Progress reports switched on |
 | 27 | Nov 2 | [Tutorverse warm-ups (current)](versions/2026-11-02-v27-warm-ups.jsx) |
+| — | Nov 2 | "Only if there's time" lessons |
 
 ---
 
@@ -309,3 +310,13 @@ tutor plans a different one. Switching used to mean going to the Lessons tab.
 **Why:** grammar rules and arithmetic are short, rule-based questions he
 missed on every practice test, so they're the fastest points to gain with
 16 days left.
+
+### Nov 2 · "Only if there's time" lessons
+- Kaplan 15.1, 15.2, Chapter 16, 18.1 and 18.2 moved to an "Only if there's
+  time" group at the bottom of each list. They don't count toward lessons
+  left, and "next" only reaches them once the core lessons are done. 8.1 and
+  8.2 are now just their practice questions.
+
+**Why:** with 16 days left he can't do everything. Charts and data tables never
+came up on his practice tests, and the Tutorverse mixed sets and full practice
+test cover what Chapter 16 and the reviews would.

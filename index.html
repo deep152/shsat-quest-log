@@ -964,11 +964,11 @@ const KAPLAN_PLAN = {
     { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", text: "Perform just before page 456." },
     { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", text: "Perform just before page 464.", tag: "focus" },
     { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", text: "Perform just before page 471." },
-    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479." },
-    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487." },
+    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479.", optional: true },
+    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487.", optional: true },
     { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", text: "Perform just before page 491." },
-    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next." },
-    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751." },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next.", optional: true },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751.", optional: true },
   ],
   ela: [
     { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus" },
@@ -981,9 +981,9 @@ const KAPLAN_PLAN = {
     { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", text: "" },
     { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", text: "" },
     { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", text: "" },
-    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "" },
-    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "" },
-    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751." },
+    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "Just the practice questions." },
+    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "Just the practice questions." },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751.", optional: true },
     { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", text: "Short. Read it the day before the test." },
   ],
 };
@@ -1082,8 +1082,8 @@ function addDays(key, n) {
 }
 function RemainingLine({ weekDone, todayKey }) {
   const all = [...KAPLAN_PLAN.math, ...KAPLAN_PLAN.ela];
-  const left = all.filter((i) => !isDone(weekDone[i.id])).length;
-  const withTutor = all.filter((i) => isTutor(weekDone[i.id])).length;
+  const left = all.filter((i) => !i.optional && !isDone(weekDone[i.id])).length; // optional ones don't count
+  const withTutor = all.filter((i) => !i.optional && isTutor(weekDone[i.id])).length;
   const mine = left - withTutor; // still on his plate (the tutor covers the rest)
   const days = daysUntil(todayKey, TEST_DATE); // test day itself isn't a study day
   if (left === 0) return <div style={{ ...S.body, fontSize: 13, color: "#3DDC97", margin: "8px 2px 0" }}>Everything's done ✓ Review your post-its.</div>;
@@ -1105,6 +1105,11 @@ function RemainingLine({ weekDone, todayKey }) {
 // Old "I know it" skips don't move it. When nothing is open after that point,
 // it goes back to the first open lesson he skipped.
 function nextIn(items, weekDone) {
+  // "Only if there's time" lessons come up only after every core one is done.
+  const core = items.filter((i) => !i.optional);
+  return nextAmong(core, weekDone) || nextAmong(items.filter((i) => i.optional), weekDone);
+}
+function nextAmong(items, weekDone) {
   let last = -1;
   items.forEach((i, k) => { const v = weekDone[i.id]; if (v && !isKnown(v)) last = k; });
   return items.slice(last + 1).find((i) => !weekDone[i.id]) || items.find((i) => !weekDone[i.id]) || null;
@@ -1161,7 +1166,7 @@ function buildReport(kind, event, weekDone, todayKey, byCat, notes = []) {
     kaplan: { math: Math.round(byCat.math / 60000), ela: Math.round(byCat.ela / 60000) },
     lessons: [...rows(KAPLAN_PLAN.math, "Math"), ...rows(KAPLAN_PLAN.ela, "ELA")],
     summary: {
-      left: all.filter((i) => !isDone(weekDone[i.id])).length,
+      left: all.filter((i) => !i.optional && !isDone(weekDone[i.id])).length,
       handledToday: all.filter((i) => { const v = weekDone[i.id]; return v && !isKnown(v) && doneDay(v) === todayKey; }).length,
       tutor: tutorItems(weekDone, notes).join(", "),
       next: [nm && `Math ${short(nm)}`, ne && `ELA ${short(ne)}`].filter(Boolean).join(" · ") || "nothing left",
@@ -1246,16 +1251,20 @@ function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNote
 // LessonsTab) so a half-typed note isn't wiped when the screen redraws.
 function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
   const next = nextIn(items, weekDone);
-  const count = items.filter((i) => isDone(weekDone[i.id])).length;
+  const core = items.filter((i) => !i.optional);
+  const count = core.filter((i) => isDone(weekDone[i.id])).length;
   return (
     <div style={{ marginTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", margin: "0 2px 6px" }}>
         <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4" }}>{title}</span>
-        <span style={{ ...S.mono, fontSize: 10, color: count === items.length ? "#3DDC97" : "#7A8598" }}>{count}/{items.length}</span>
+        <span style={{ ...S.mono, fontSize: 10, color: count === core.length ? "#3DDC97" : "#7A8598" }}>{count}/{core.length}</span>
       </div>
       {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-      {items.map((i) => (
+      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional)].map((i, k, arr) => (
         <div key={i.id} style={{ marginBottom: 6 }}>
+          {i.optional && (k === 0 || !arr[k - 1].optional) && (
+            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>ONLY IF THERE'S TIME</div>
+          )}
           <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
           <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
         </div>
@@ -1461,7 +1470,8 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek, notes, a
   // 11.4 today). Kept only while the app is open; once he taps ✓ or Ask tutor
   // on it, "next" moves past it anyway.
   const [pickId, setPickId] = useState(null);
-  const open = (isMath ? KAPLAN_PLAN.math : KAPLAN_PLAN.ela).filter((i) => !weekDone[i.id]);
+  const all = isMath ? KAPLAN_PLAN.math : KAPLAN_PLAN.ela;
+  const open = [...all.filter((i) => !i.optional), ...all.filter((i) => i.optional)].filter((i) => !weekDone[i.id]);
   const shown = (pickId && open.find((i) => i.id === pickId)) || next;
   const step = (d) => {
     if (!shown || open.length < 2) return;
