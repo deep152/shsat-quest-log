@@ -1,6 +1,6 @@
 # Guri's SHSAT Quest Log
 
-**[Live app](https://deep152.github.io/shsat-quest-log/)** · [Changelog](CHANGELOG.md) · [All versions](versions/)
+**[Live demo](https://deep152.github.io/shsat-quest-log/?demo)** · [Changelog](CHANGELOG.md) · [All versions](versions/)
 
 A daily study tracker I built for my younger brother (8th grade) while he
 preps for the SHSAT, NYC's specialized high school admissions exam. It started

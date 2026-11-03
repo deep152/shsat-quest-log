@@ -337,3 +337,9 @@ test cover what Chapter 16 and the reviews would.
   phone) sends updates, and his phone resends everything once to fix it.
 - `?demo` at the end of the link opens a copy with sample progress. It saves
   separately, never touches his data, and never sends anything.
+
+### Nov 2 · Demo Sheet
+- The `?demo` link can report to its own demo Sheet, using
+  `progress-sheet/Code-demo.gs` (same script, different Sheet, never emails).
+  It stays off until that script is deployed. The README's link now opens the
+  demo.

@@ -284,7 +284,7 @@ function GuriQuestLog() {
   // and when he switches away, which is when today's Kaplan time matters most.
   // Skipped when nothing changed since the last one.
   useEffect(() => {
-    if (!loaded || !REPORT_URL) return;
+    if (!loaded || !reportUrl()) return;
     syncReport(weekDone, dateKey, times, notes);
     const onHide = () => { if (document.visibilityState === "hidden") syncReport(weekDone, dateKey, times, notes); };
     document.addEventListener("visibilitychange", onHide);
@@ -1161,6 +1161,9 @@ function tutorItems(weekDone, notes = []) {
 // gets lost. Offline? It waits in a queue and goes out next time. Empty
 // REPORT_URL = reporting off.
 const REPORT_URL = "https://script.google.com/macros/s/AKfycbzoCGvW5nHChbFHHFHM6i03PmTzdcqU_mv9jyLTwDKSYFqvFygi9bsI_HAW-Y4U6DqB4w/exec";
+// The ?demo link reports to its own demo Sheet (no emails). Empty = demo sends nothing.
+const DEMO_REPORT_URL = "";
+const reportUrl = () => (DEMO ? DEMO_REPORT_URL : REPORT_URL);
 const REPORT_QUEUE_KEY = "guri-report-queue";
 const REPORT_DEVICE_KEY = "guri-report-device";
 // Only HIS phone reports. Anyone else opening the link (me, a recruiter) has a
@@ -1171,7 +1174,7 @@ const REPORT_START = "2026-11-02";
 const DEMO = typeof window !== "undefined" && /[?&]demo\b/.test(window.location.search);
 let reportDevice = null;
 async function isReportDevice(weekDone) {
-  if (DEMO) return false;
+  if (DEMO) return !!DEMO_REPORT_URL;
   if (reportDevice !== null) return reportDevice;
   let flag = null;
   try { const r = await window.storage.get(REPORT_DEVICE_KEY); flag = r?.value; } catch (e) {}
@@ -1223,7 +1226,7 @@ async function flushReports(payload) {
     if (unsent.length) { unsent.push(p); continue; } // keep the order: stop at the first failure
     try {
       // no-cors + text/plain is the one kind of request Apps Script accepts from a page
-      await fetch(REPORT_URL, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(p) });
+      await fetch(reportUrl(), { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(p) });
     } catch (e) { unsent.push(p); }
   }
   try { await window.storage.set(REPORT_QUEUE_KEY, JSON.stringify(unsent)); } catch (e) {}
@@ -1236,7 +1239,7 @@ function rememberSig(sig) {
   try { window.storage.set(REPORT_LAST_KEY, sig).catch(() => {}); } catch (e) {}
 }
 function lessonReport(event, weekDone, todayKey, times, notes, kind = "lesson") {
-  if (!REPORT_URL) return;
+  if (!reportUrl()) return;
   const p = buildReport(kind, event, weekDone, todayKey, readStudy(times.study, Date.now()).byCat, notes);
   rememberSig(reportSig(p));
   return report(p, weekDone);
@@ -1246,7 +1249,7 @@ function noteReport(event, weekDone, todayKey, times, notes) {
   return lessonReport(event, weekDone, todayKey, times, notes, "note");
 }
 async function syncReport(weekDone, todayKey, times, notes) {
-  if (!REPORT_URL) return;
+  if (!reportUrl()) return;
   const p = buildReport("sync", null, weekDone, todayKey, readStudy(times.study, Date.now()).byCat, notes);
   if (lastSig === null) {
     try { const r = await window.storage.get(REPORT_LAST_KEY); lastSig = r?.value || ""; } catch (e) { lastSig = ""; }

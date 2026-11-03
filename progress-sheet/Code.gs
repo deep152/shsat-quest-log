@@ -13,7 +13,11 @@
 // The app owns all the logic (what's done, what's next). This script only
 // writes what it's sent, so the Sheet always matches his phone.
 
+// The two lines that differ between the real Sheet and the demo copy
+// (progress-sheet/Code-demo.gs): which Sheet, and whether to email.
 const SHEET_ID = "1-onh601HIlYxbU1bZ2FxtRl8nA6DXbSJnUuKrEwAYQ4";
+const SEND_EMAILS = true;
+const TITLE = "Guri's SHSAT progress";
 const TZ = "America/New_York";
 const MAX_EMAILS_PER_DAY = 30; // the web app URL is public, so cap the emails
 const ACTION_LABELS = { done: "Done", tutor: "Ask tutor", undo: "Undone", note: "Said it's hard" };
@@ -33,7 +37,7 @@ function doPost(e) {
     writeDay(ss, data);
     if (data.kind === "lesson" || data.kind === "note") {
       writeLog(ss, data);
-      if (data.event.action !== "undo") sendEmail(ss, data);
+      if (SEND_EMAILS && data.event.action !== "undo") sendEmail(ss, data);
     }
     return text("ok");
   } finally {
@@ -173,7 +177,7 @@ function ensureSetup(ss, force) {
 
   const L = (r) => "Lessons!" + r;
   const rows = [
-    ["Guri's SHSAT progress", ""],
+    [TITLE, ""],
     ["Fills in from his phone. Blue cells are settings you can change.", ""],
     ["", ""],
     ["Test date", ""],
