@@ -22,7 +22,7 @@ on his phone every day, so **never break his saved progress**.
 1. **Never rename ids or storage keys.** Task ids (`m4`, `e1`, …) and storage
    keys (`guri-day:*`, `guri-study:*`, `guri-kaplanweek:2026-10-12`,
    `guri-completed-dates`, `guri-notes`, `guri-khansq:*`, `guri-report-queue`,
-   `guri-report-last`) are how his progress is saved. Renaming one silently
+   `guri-report-last`, `guri-report-device`) are how his progress is saved. Renaming one silently
    wipes his history. New things get new ids.
 2. **Old saved data has to keep working.** Example: checks used to be saved as
    `true` and are now saved as a date. Both still count as done. A lesson can
@@ -42,7 +42,8 @@ on his phone every day, so **never break his saved progress**.
    every tab opens, and the console shows no errors.
 8. **Progress reports never get in his way.** The app only sends; it never
    waits on a report or shows an error when one fails. If an update's shape
-   changes, change `valid()` in `Code.gs` to match.
+   changes, change `valid()` in `Code.gs` to match. Only his phone reports
+   (see `isReportDevice`); use `?demo` to show the app to anyone else.
 9. **Write for a 13-year-old.** Short labels, no jargon. Code comments explain *why*, not what.
 
 ## Updating the plan

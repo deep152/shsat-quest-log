@@ -1116,6 +1116,25 @@ function tutorItems(weekDone, notes = []) {
 // REPORT_URL = reporting off.
 const REPORT_URL = "https://script.google.com/macros/s/AKfycbzoCGvW5nHChbFHHFHM6i03PmTzdcqU_mv9jyLTwDKSYFqvFygi9bsI_HAW-Y4U6DqB4w/exec";
 const REPORT_QUEUE_KEY = "guri-report-queue";
+const REPORT_DEVICE_KEY = "guri-report-device";
+// Only HIS phone reports. Anyone else opening the link (me, a recruiter) has a
+// fresh browser, and its empty progress would overwrite the Sheet. A device
+// counts as his if it has lesson checks dated before reporting started, or
+// was opened once with ?report=on. ?demo never reports (see the page's shim).
+const REPORT_START = "2026-11-02";
+const DEMO = typeof window !== "undefined" && /[?&]demo\b/.test(window.location.search);
+let reportDevice = null;
+async function isReportDevice(weekDone) {
+  if (DEMO) return false;
+  if (reportDevice !== null) return reportDevice;
+  let flag = null;
+  try { const r = await window.storage.get(REPORT_DEVICE_KEY); flag = r?.value; } catch (e) {}
+  const asked = /[?&]report=on\b/.test(window.location.search);
+  const his = Object.values(weekDone).some((v) => { const d = doneDay(v); return !!d && d < REPORT_START; });
+  reportDevice = flag === "on" || asked || his;
+  if (reportDevice && flag !== "on") { try { await window.storage.set(REPORT_DEVICE_KEY, "on"); } catch (e) {} }
+  return reportDevice;
+}
 const REPORT_LAST_KEY = "guri-report-last";
 
 function buildReport(kind, event, weekDone, todayKey, byCat, notes = []) {
@@ -1144,8 +1163,8 @@ function buildReport(kind, event, weekDone, todayKey, byCat, notes = []) {
 // One send at a time, in order, so the Sheet always ends on the newest state.
 let reportChain = Promise.resolve();
 let lastSig = null; // what was last sent; also saved so reopening doesn't resend it
-function report(payload) {
-  reportChain = reportChain.then(() => flushReports(payload)).catch(() => {});
+function report(payload, weekDone) {
+  reportChain = reportChain.then(async () => { if (await isReportDevice(weekDone)) await flushReports(payload); }).catch(() => {});
   return reportChain;
 }
 async function flushReports(payload) {
@@ -1163,7 +1182,9 @@ async function flushReports(payload) {
   }
   try { await window.storage.set(REPORT_QUEUE_KEY, JSON.stringify(unsent)); } catch (e) {}
 }
-const reportSig = (p) => JSON.stringify([p.today, p.kaplan, p.lessons]);
+// "v2": changed Nov 2 so his phone resends everything once (an empty browser
+// had overwritten the Sheet).
+const reportSig = (p) => JSON.stringify(["v2", p.today, p.kaplan, p.lessons]);
 function rememberSig(sig) {
   lastSig = sig;
   try { window.storage.set(REPORT_LAST_KEY, sig).catch(() => {}); } catch (e) {}
@@ -1172,7 +1193,7 @@ function lessonReport(event, weekDone, todayKey, times, notes, kind = "lesson") 
   if (!REPORT_URL) return;
   const p = buildReport(kind, event, weekDone, todayKey, readStudy(times.study, Date.now()).byCat, notes);
   rememberSig(reportSig(p));
-  return report(p);
+  return report(p, weekDone);
 }
 // When he writes what was hard: logged and emailed like a lesson tap.
 function noteReport(event, weekDone, todayKey, times, notes) {
@@ -1187,7 +1208,7 @@ async function syncReport(weekDone, todayKey, times, notes) {
   const sig = reportSig(p);
   if (sig === lastSig) return; // nothing new since the last update
   rememberSig(sig);
-  return report(p);
+  return report(p, weekDone);
 }
 
 // ---- LESSONS tab -------------------------------------------------------
@@ -1576,7 +1597,7 @@ function Header({ dayName, daysCleared, monthName }) {
     <div style={S.header}>
       <div>
         <div style={{ ...S.mono, fontSize: 10, letterSpacing: 3, color: "#556075" }}>SHSAT GRIND · {monthName}</div>
-        <div style={{ ...S.display, fontSize: 26, color: "#E8ECF4", marginTop: 3 }}>GURIE<span style={{ color: "#2E6FF2" }}>.</span> <span style={{ fontSize: 15, color: "#7A8598", fontWeight: 400 }}>{dayName}</span></div>
+        <div style={{ ...S.display, fontSize: 26, color: "#E8ECF4", marginTop: 3 }}>GURIE<span style={{ color: "#2E6FF2" }}>.</span>{DEMO && <span style={{ ...S.mono, fontSize: 10, color: "#F2C14E", marginLeft: 6, verticalAlign: "middle" }}>DEMO</span>} <span style={{ fontSize: 15, color: "#7A8598", fontWeight: 400 }}>{dayName}</span></div>
       </div>
       <div style={S.streakBadge}>
         <div style={{ ...S.display, fontSize: 20, color: "#F2C14E", lineHeight: 1 }}>{daysCleared}</div>

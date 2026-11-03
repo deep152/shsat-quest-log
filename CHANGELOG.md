@@ -330,3 +330,10 @@ test cover what Chapter 16 and the reviews would.
   over my notes" (same check, so the PS5 rule doesn't change).
 - The tutor check says to run the Math timer there: tutor time counts toward
   his 2 hours, since he does a lesson at home and another with the tutor.
+
+### Nov 2 · Only his phone reports, plus a demo link
+- Opening the app in a fresh browser sent its empty progress and overwrote
+  the Sheet. Now only a device with lesson checks from before Nov 2 (his
+  phone) sends updates, and his phone resends everything once to fix it.
+- `?demo` at the end of the link opens a copy with sample progress. It saves
+  separately, never touches his data, and never sends anything.
