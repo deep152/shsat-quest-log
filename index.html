@@ -545,18 +545,20 @@ function boxBorder(study, cats, done) {
 
 // ---- 🏫 school work box ----
 function SchoolCard(props) {
-  const { plan, checked, toggleCheck, study, startCat } = props;
+  const { plan, checked, toggleCheck, study } = props;
   const active = activeIn(study, ["school"]);
   const doneAll = plan.school.length > 0 && plan.school.every((c) => checked[c.id]);
+  // No school timer anymore, just the check. Old time and a session that was
+  // already running still show, so saved days keep working and it can be stopped.
+  const schoolMs = study.byCat.school;
+  if (plan.school.length === 0 && !active && schoolMs === 0) return null; // no homework today
   return (
     <div style={{ ...S.bigCard, borderColor: boxBorder(study, ["school"], doneAll) }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span style={{ ...S.mono, fontSize: 10.5, letterSpacing: 1.5, color: "#7A8598" }}>🏫 SCHOOL WORK</span>
-        <span style={{ ...S.display, fontSize: 20, color: "#E8ECF4" }}>{formatDuration(study.byCat.school)}</span>
+        {schoolMs > 0 && <span style={{ ...S.display, fontSize: 20, color: "#E8ECF4" }}>{formatDuration(schoolMs)}</span>}
       </div>
-      {active ? <StudyControls {...props} /> : (
-        <button onClick={() => startCat("school")} style={{ ...S.bigBtn, background: "#2A3242", color: "#E8ECF4", marginTop: 10 }}>▶ START SCHOOL WORK</button>
-      )}
+      {active && <StudyControls {...props} />}
       {plan.school.map((c) => <CheckRow key={c.id} item={c} on={!!checked[c.id]} onToggle={toggleCheck} compact />)}
     </div>
   );

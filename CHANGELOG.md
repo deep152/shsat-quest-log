@@ -343,3 +343,12 @@ test cover what Chapter 16 and the reviews would.
   `progress-sheet/Code-demo.gs` (same script, different Sheet, never emails).
   It stays off until that script is deployed. The README's link now opens the
   demo.
+
+### Nov 3 · School work is just a check
+- The School Work box no longer has a timer, only "Homework done." On days with
+  no homework, the box doesn't show.
+- Old school time still shows on the days it was saved, and a session already
+  running can still be stopped.
+
+**Why:** he just needs to mark homework done. School time never counted toward
+his Kaplan goal, the weekly totals or the Sheet.
