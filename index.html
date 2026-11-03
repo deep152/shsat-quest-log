@@ -465,7 +465,7 @@ function TodayTab(props) {
     <>
       <div style={{ padding: "0 16px" }}>
         <div style={{ ...S.mono, fontSize: 10, letterSpacing: 2, color: "#556075", margin: "0 2px 10px" }}>{plan.label} · 🌙 DONE BY 10:30</div>
-        {spamming && <div style={S.spamBanner}>lock in lil kid 🔒</div>}
+        {spamming && !DEMO && <div style={S.spamBanner}>lock in lil kid 🔒</div>}
 
         <TodayCard {...props} />
 
