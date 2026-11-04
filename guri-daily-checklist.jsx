@@ -1414,7 +1414,7 @@ function WarmupTab({ weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
       <SectionLabel text="TUTORVERSE WARM-UP · 15 MIN BEFORE KAPLAN" />
       <ol style={{ ...S.body, fontSize: 13, color: "#C9D2E0", margin: "0 0 8px", paddingLeft: 20, lineHeight: 1.6 }}>
         <li>Do the first half of the set.</li>
-        <li>Check your answers in the back of the book (p.298).</li>
+        <li>Check your answers in the back: grammar p.298, math p.300–302, Form B p.303.</li>
         <li>All right → <b>✓</b>. Some wrong → <b>👨‍🏫 Ask tutor</b> and write which ones.</li>
       </ol>
       <a href="https://thetutorverse.com/books" target="_blank" rel="noopener noreferrer" style={S.siteLink}>📘 Answer explanations: thetutorverse.com/books</a>
