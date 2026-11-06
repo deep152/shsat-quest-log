@@ -352,3 +352,8 @@ test cover what Chapter 16 and the reviews would.
 
 **Why:** he just needs to mark homework done. School time never counted toward
 his Kaplan goal, the weekly totals or the Sheet.
+
+### Nov 6 · Demo reset link
+- `?demo&reset` wipes the demo copy back to the clean sample and sends that to
+  the demo Sheet, so each recording or showing starts fresh. Real data is
+  never touched.

@@ -28,6 +28,12 @@ const { useState, useEffect } = React;
 const DEMO_PREFIX = /[?&]demo\b/.test(location.search) ? "demo:" : "";
 if (DEMO_PREFIX) {
   try {
+    // ?demo&reset: start over with the clean sample (for a fresh take). The
+    // "reset" is then dropped from the address so a refresh doesn't reset again.
+    if (/[?&]reset\b/.test(location.search)) {
+      Object.keys(localStorage).filter((k) => k.startsWith("demo:")).forEach((k) => localStorage.removeItem(k));
+      history.replaceState(null, "", location.pathname + "?demo");
+    }
     if (localStorage.getItem("demo:guri-kaplanweek:2026-10-12") === null) {
       localStorage.setItem("demo:guri-kaplanweek:2026-10-12", JSON.stringify({ m1: true, m2: true, m3: true, m5: "2026-10-28", m6: "tutor:2026-10-30", m7: "2026-10-31", e1: true, e2: true, e3: "2026-10-29", w1: "2026-11-01" }));
       localStorage.setItem("demo:guri-notes", JSON.stringify([{ id: 1, stamp: "Fri 10/30", text: "#3 and #7, number lines", lessonId: "m6" }]));
