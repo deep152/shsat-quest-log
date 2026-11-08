@@ -376,7 +376,7 @@ export default function GuriQuestLog() {
       {tab === "today" && (
         <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
-      {tab === "warmup" && <WarmupTab {...{ weekDone, toggleWeek, notes, addNote, toggleNoteDone }} />}
+      {tab === "diag" && <DiagTab {...{ weekDone, toggleWeek, notes, addNote, toggleNoteDone }} />}
       {tab === "todo" && <LessonsTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, toggleNoteDone, deleteNote }} />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
 
@@ -391,7 +391,7 @@ function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
     { id: "todo", label: "Lessons" },
-    { id: "warmup", label: "Warm-up" },
+    { id: "diag", label: "Diagnostics" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -905,53 +905,84 @@ const TEST_DATE = "2026-11-18";
 const KAPLAN_PLAN = {
   id: "2026-10-12", // storage key - keep the same so old checks carry over
   math: [
+    // ---- Final stretch (Nov 8 – 17) --------------------------------------
+    // After the Nov 7 diagnostic (double time, same score as Sept) the plan
+    // changed: no new Kaplan lessons. He goes straight through the Tutorverse
+    // sections for the basics he keeps missing (whole sets, not half), then
+    // Form B. Redoing the diagnostics is its own tab. New ids (t..., d...) so
+    // nothing old moves. "day" is the plan, not a lock: he can go faster.
+    { id: "t1",  lesson: "Numbers", page: "Tutorverse p.180", topic: "Number lines, negatives", text: "Sun 11/8", steps: "tvm" },
+    { id: "t2",  lesson: "Operations", page: "Tutorverse p.184", topic: "Order of operations (PEMDAS)", text: "Sun 11/8", steps: "tvm" },
+    { id: "t3",  lesson: "Fractions", page: "Tutorverse p.189", topic: "Fractions, simplify before you multiply", text: "Mon 11/9", steps: "tvm" },
+    { id: "t4",  lesson: "Word Problems", page: "Tutorverse p.191", topic: "Rates, turning words into math", text: "Mon 11/9", steps: "tvm" },
+    { id: "t5",  lesson: "Expressions & Equations", page: "Tutorverse p.211", topic: "Solving for x", text: "Tue 11/10", steps: "tvm" },
+    { id: "t6",  lesson: "Algebra in Context", page: "Tutorverse p.214", topic: "Making the equation from words", text: "Tue 11/10", steps: "tvm" },
+    { id: "t7",  lesson: "Plugins", page: "Tutorverse p.216", topic: "Plug in numbers (odd/even with letters)", text: "Wed 11/11", steps: "tvm" },
+    { id: "t8",  lesson: "Inequalities", page: "Tutorverse p.219", topic: "Inequalities, number lines", text: "Wed 11/11", steps: "tvm" },
+    { id: "t9",  lesson: "Area & Perimeter", page: "Tutorverse p.238", topic: "Area, perimeter", text: "Thu 11/12", steps: "tvm" },
+    { id: "t10", lesson: "Volume", page: "Tutorverse p.243", topic: "Volume", text: "Thu 11/12", steps: "tvm" },
+    { id: "t11", lesson: "Measurements", page: "Tutorverse p.253", topic: "Unit conversion", text: "Thu 11/12", steps: "tvm" },
+    { id: "t12", lesson: "Numbers & Operations Mixed", page: "Tutorverse p.207", topic: "Mixed practice", text: "Fri 11/13", steps: "tvm" },
+    { id: "t13", lesson: "Geometry Mixed", page: "Tutorverse p.260", topic: "Mixed practice", text: "Fri 11/13", steps: "tvm" },
+    { id: "d8",  lesson: "Form B practice test", page: "Tutorverse p.264", topic: "Last full test", text: "Sat 11/14. Not before. Answers p.303.", steps: "test" },
+    { id: "d9",  lesson: "Form B: wrong math", page: "Tutorverse p.264", topic: "Go over with Khan", text: "Sun 11/15", steps: "redo" },
+    { id: "t14", lesson: "Algebra Mixed", page: "Tutorverse p.222", topic: "Mixed practice, light", text: "Mon 11/16", steps: "tvm" },
+    // ---- Kaplan: only to reteach a topic ---------------------------------
     // already done
-    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", text: "Done." },
-    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", topic: "Order of Operations, Number Properties, Variables", text: "Perform just before page 315." },
-    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", topic: "Picking Numbers", text: "Perform just before page 320." },
+    { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", text: "Done.", optional: "kaplan" },
+    { id: "m2",  lesson: "Lesson 10.2", page: "page 306", topic: "Order of Operations, Number Properties, Variables", text: "Perform just before page 315.", optional: "kaplan" },
+    { id: "m3",  lesson: "Lesson 10.3", page: "page 315", topic: "Picking Numbers", text: "Perform just before page 320.", optional: "kaplan" },
     // Ch 11 onward, in book order - the order his tutor teaches it
-    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", topic: "Fractions & Decimals", text: "Perform just before page 334.", tag: "focus" },
-    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", topic: "Rounding, Number Lines, Absolute Value, Factors, Multiples", text: "Perform just before page 343.", tag: "focus" },
-    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", topic: "Percents", text: "Perform just before page 350.", tag: "strong" },
-    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", topic: "Statistics Terms", text: "Perform just before page 356." },
-    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", topic: "Rates", text: "Perform just before page 360.", tag: "focus" },
-    { id: "m10", lesson: "Lesson 11.6", page: "page 360", topic: "Ratios & Proportions", text: "Perform just before page 367." },
-    { id: "m11", lesson: "Lesson 11.7", page: "page 367", topic: "Coordinate Plane", text: "Perform just before page 374." },
-    { id: "m12", lesson: "Lesson 11.8", page: "page 374", topic: "Probability, Combinations, Permutations", text: "Perform just before page 381." },
+    { id: "m5",  lesson: "Lesson 11.1", page: "page 326", topic: "Fractions & Decimals", text: "Perform just before page 334.", tag: "focus", optional: "kaplan" },
+    { id: "m6",  lesson: "Lesson 11.2", page: "page 334", topic: "Rounding, Number Lines, Absolute Value, Factors, Multiples", text: "Perform just before page 343.", tag: "focus", optional: "kaplan" },
+    { id: "m7",  lesson: "Lesson 11.3", page: "page 343", topic: "Percents", text: "Perform just before page 350.", tag: "strong", optional: "kaplan" },
+    { id: "m8",  lesson: "Lesson 11.4", page: "page 350", topic: "Statistics Terms", text: "Perform just before page 356.", optional: "kaplan" },
+    { id: "m9",  lesson: "Lesson 11.5", page: "page 356", topic: "Rates", text: "Perform just before page 360.", tag: "focus", optional: "kaplan" },
+    { id: "m10", lesson: "Lesson 11.6", page: "page 360", topic: "Ratios & Proportions", text: "Perform just before page 367.", optional: "kaplan" },
+    { id: "m11", lesson: "Lesson 11.7", page: "page 367", topic: "Coordinate Plane", text: "Perform just before page 374.", optional: "kaplan" },
+    { id: "m12", lesson: "Lesson 11.8", page: "page 374", topic: "Probability, Combinations, Permutations", text: "Perform just before page 381.", optional: "kaplan" },
     // Backsolving is a test trick (plug in the answer choices) used most on
     // equations, so it goes right before Algebra.
-    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", topic: "Backsolving", text: "Perform just before page 325.", tag: "focus" },
-    { id: "m13", lesson: "Lesson 12.1", page: "page 382", topic: "Expressions & Equations, One Variable", text: "Perform just before page 388.", tag: "focus" },
-    { id: "m14", lesson: "Lesson 12.2", page: "page 388", topic: "Two Variables", text: "Perform just before page 396.", tag: "focus" },
-    { id: "m15", lesson: "Lesson 12.3", page: "page 396", topic: "Inequalities", text: "Perform just before page 403.", tag: "focus" },
-    { id: "m18", lesson: "Lesson 13.1", page: "page 404", topic: "Lines & Angles", text: "Perform just before page 416." },
-    { id: "m19", lesson: "Lesson 13.2", page: "page 416", topic: "Perimeter & Area", text: "Perform just before page 426." },
-    { id: "m20", lesson: "Lesson 13.3", page: "page 426", topic: "Geometric Figures", text: "Perform just before page 436." },
-    { id: "m21", lesson: "Lesson 13.4", page: "page 436", topic: "3-D Shapes", text: "Perform just before page 441." },
-    { id: "m17", lesson: "Lesson 14.1", page: "page 442", topic: "Word Problems: Arithmetic", text: "Perform just before page 450.", tag: "focus" },
-    { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", text: "Perform just before page 456." },
-    { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", text: "Perform just before page 464.", tag: "focus" },
-    { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", text: "Perform just before page 471." },
-    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479.", optional: true },
-    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487.", optional: true },
-    { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", text: "Perform just before page 491." },
-    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next.", optional: "review" },
-    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751.", optional: "review" },
+    { id: "m4",  lesson: "Lesson 10.4", page: "page 320", topic: "Backsolving", text: "Perform just before page 325.", tag: "focus", optional: "kaplan" },
+    { id: "m13", lesson: "Lesson 12.1", page: "page 382", topic: "Expressions & Equations, One Variable", text: "Perform just before page 388.", tag: "focus", optional: "kaplan" },
+    { id: "m14", lesson: "Lesson 12.2", page: "page 388", topic: "Two Variables", text: "Perform just before page 396.", tag: "focus", optional: "kaplan" },
+    { id: "m15", lesson: "Lesson 12.3", page: "page 396", topic: "Inequalities", text: "Perform just before page 403.", tag: "focus", optional: "kaplan" },
+    { id: "m18", lesson: "Lesson 13.1", page: "page 404", topic: "Lines & Angles", text: "Perform just before page 416.", optional: "kaplan" },
+    { id: "m19", lesson: "Lesson 13.2", page: "page 416", topic: "Perimeter & Area", text: "Perform just before page 426.", optional: "kaplan" },
+    { id: "m20", lesson: "Lesson 13.3", page: "page 426", topic: "Geometric Figures", text: "Perform just before page 436.", optional: "kaplan" },
+    { id: "m21", lesson: "Lesson 13.4", page: "page 436", topic: "3-D Shapes", text: "Perform just before page 441.", optional: "kaplan" },
+    { id: "m17", lesson: "Lesson 14.1", page: "page 442", topic: "Word Problems: Arithmetic", text: "Perform just before page 450.", tag: "focus", optional: "kaplan" },
+    { id: "m23", lesson: "Lesson 14.2", page: "page 450", topic: "Word Problems: Stats & Probability", text: "Perform just before page 456.", optional: "kaplan" },
+    { id: "m16", lesson: "Lesson 14.3", page: "page 456", topic: "Word Problems: Algebra", text: "Perform just before page 464.", tag: "focus", optional: "kaplan" },
+    { id: "m22", lesson: "Lesson 14.4", page: "page 464", topic: "Word Problems: Geometry", text: "Perform just before page 471.", optional: "kaplan" },
+    { id: "m27", lesson: "Lesson 15.1", page: "page 472", topic: "Charts", text: "Perform just before page 479.", optional: "kaplan" },
+    { id: "m28", lesson: "Lesson 15.2", page: "page 479", topic: "Data Tables", text: "Perform just before page 487.", optional: "kaplan" },
+    { id: "m24", lesson: "Lesson 15.3", page: "page 487", topic: "Surveys with Two Responses", text: "Perform just before page 491.", optional: "kaplan" },
+    { id: "m25", lesson: "Chapter 16", page: "sets start page 492", topic: "Mixed Perform Sets", text: "Check each set before starting the next.", optional: "kaplan" },
+    { id: "m26", lesson: "Lesson 18.2", page: "page 526", topic: "Math Strategic Review", text: "Answers start page 751.", optional: "kaplan" },
   ],
   ela: [
-    { id: "e1",  lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus" },
-    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus" },
-    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong" },
-    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", text: "" },
-    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", text: "" },
-    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", text: "" },
-    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", topic: "Elimination Strategies", text: "" },
-    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", text: "" },
-    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", text: "" },
-    { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", text: "" },
-    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "Just the practice questions." },
-    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "Just the practice questions." },
-    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751.", optional: "review" },
+    // Final stretch: mostly math. ELA is just the grammar rules he missed
+    // (short, rule-based, fast points). His reading is getting better with Khan.
+    { id: "g1", lesson: "Subordination & Coordination", page: "Tutorverse p.60", topic: "Comma splices", text: "", steps: "tve" },
+    { id: "g2", lesson: "Modifiers", page: "Tutorverse p.50", topic: "Misplaced modifiers", text: "", steps: "tve" },
+    { id: "g3", lesson: "Punctuating a Series", page: "Tutorverse p.66", topic: "Commas in a list", text: "", steps: "tve" },
+    { id: "g4", lesson: "Tenses, Mood & Number", page: "Tutorverse p.52", topic: "Tense shifts", text: "", steps: "tve" },
+    { id: "g5", lesson: "Pronoun Clarity", page: "Tutorverse p.49", topic: "Pronouns", text: "", steps: "tve" },
+    { id: "d22", lesson: "Form B: wrong ELA", page: "Tutorverse p.264", topic: "Grammar ones first", text: "Sun 11/15", steps: "redo" },
+    { id: "e1", lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus", optional: "kaplan" },
+    { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus", optional: "kaplan" },
+    { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong", optional: "kaplan" },
+    { id: "e4",  lesson: "Lesson 5.1", page: "page 138", topic: "Roadmapping (reading)", text: "", optional: "kaplan" },
+    { id: "e5",  lesson: "Lesson 5.2", page: "page 154", topic: "The Kaplan Method for reading", text: "", optional: "kaplan" },
+    { id: "e6",  lesson: "Lesson 6.1", page: "page 172", topic: "Reading Question Types", text: "", optional: "kaplan" },
+    { id: "e7",  lesson: "Lesson 6.2", page: "page 189", topic: "Elimination Strategies", text: "", optional: "kaplan" },
+    { id: "e8",  lesson: "Lesson 7.1", page: "page 206", topic: "Fiction Passages", text: "", optional: "kaplan" },
+    { id: "e9",  lesson: "Lesson 7.2", page: "page 228", topic: "Poetry", text: "", optional: "kaplan" },
+    { id: "e10", lesson: "Lesson 7.3", page: "page 243", topic: "Science Passages", text: "", optional: "kaplan" },
+    { id: "e11", lesson: "Lesson 8.1", page: "page 258", topic: "Question Types Review", text: "Just the practice questions.", optional: "kaplan" },
+    { id: "e15", lesson: "Lesson 8.2", page: "page 270", topic: "Strategic Reading & Elimination Review", text: "Just the practice questions.", optional: "kaplan" },
+    { id: "e13", lesson: "Lesson 18.1", page: "page 518", topic: "ELA Strategic Review", text: "Answers start page 751.", optional: "kaplan" },
     { id: "e12", lesson: "Chapter 17", page: "page 507", topic: "Preparing for Test Day", text: "Short. Read it the day before the test." },
   ],
 };
@@ -975,7 +1006,7 @@ const WARMUPS = [
   { id: "w11", lesson: "Probability", page: "Tutorverse p.226", topic: "Math", text: "" },
   { id: "w12", lesson: "Imaginary Operations", page: "Tutorverse p.205", topic: "Math", text: "" },
   { id: "w13", lesson: "Scientific Notation", page: "Tutorverse p.201", topic: "Math", text: "" },
-  { id: "w14", lesson: "Final Practice Test (Form B)", page: "Tutorverse p.264", topic: "Full test", text: "Around Nov 11–13. Timed, in order, no going back. Not the day before the test." },
+  // w14 (Form B) moved to the Math plan as d8 on Nov 7, so it's on the Today card.
   { id: "w15", lesson: "Numbers & Operations mixed", page: "Tutorverse p.207", topic: "Math review", text: "" },
   { id: "w16", lesson: "Algebra mixed", page: "Tutorverse p.222", topic: "Math review", text: "" },
   { id: "w17", lesson: "Probability & Stats mixed", page: "Tutorverse p.234", topic: "Math review", text: "" },
@@ -1054,7 +1085,7 @@ function RemainingLine({ weekDone, todayKey }) {
   const withTutor = all.filter((i) => !i.optional && isTutor(weekDone[i.id])).length;
   const mine = left - withTutor; // still on his plate (the tutor covers the rest)
   const days = daysUntil(todayKey, TEST_DATE); // test day itself isn't a study day
-  if (left === 0) return <div style={{ ...S.body, fontSize: 13, color: "#3DDC97", margin: "8px 2px 0" }}>Everything's done ✓ Review your post-its.</div>;
+  if (left === 0) return <div style={{ ...S.body, fontSize: 13, color: "#3DDC97", margin: "8px 2px 0" }}>Everything's done ✓ Go over your notes.</div>;
   const finish = addDays(todayKey, Math.max(0, Math.ceil(mine / 2) - 1));
   const onTime = finish < TEST_DATE;
   return (
@@ -1089,6 +1120,8 @@ function lessonById(id) {
   if (m) return { ...m, subj: "Math" };
   const e = KAPLAN_PLAN.ela.find((i) => i.id === id);
   if (e) return { ...e, subj: "ELA" };
+  const dg = DIAGS.find((i) => i.id === id);
+  if (dg) return { ...dg, subj: "Diagnostic" };
   const w = WARMUPS.find((i) => i.id === id);
   return w ? { ...w, subj: "Warm-up" } : null;
 }
@@ -1104,6 +1137,7 @@ function tutorItems(weekDone, notes = []) {
   return [
     ...KAPLAN_PLAN.math.filter((i) => isTutor(weekDone[i.id])).map((i) => one(i, "📐")),
     ...KAPLAN_PLAN.ela.filter((i) => isTutor(weekDone[i.id])).map((i) => one(i, "📖")),
+    ...DIAGS.filter((i) => isTutor(weekDone[i.id])).map((i) => one(i, "📋")),
   ];
 }
 
@@ -1154,7 +1188,7 @@ function buildReport(kind, event, weekDone, todayKey, byCat, notes = []) {
   return {
     v: 1, kind, event, at: Date.now(), today: todayKey,
     kaplan: { math: Math.round(byCat.math / 60000), ela: Math.round(byCat.ela / 60000) },
-    lessons: [...rows(KAPLAN_PLAN.math, "Math"), ...rows(KAPLAN_PLAN.ela, "ELA")],
+    lessons: [...rows(KAPLAN_PLAN.math, "Math"), ...rows(KAPLAN_PLAN.ela, "ELA"), ...rows(DIAGS, "Diagnostic")],
     summary: {
       left: all.filter((i) => !i.optional && !isDone(weekDone[i.id])).length,
       handledToday: all.filter((i) => { const v = weekDone[i.id]; return v && !isKnown(v) && doneDay(v) === todayKey; }).length,
@@ -1252,10 +1286,10 @@ function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, 
         <span style={{ ...S.mono, fontSize: 10, color: count === core.length ? "#3DDC97" : "#7A8598" }}>{count}/{core.length}</span>
       </div>
       {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional === "review"), ...items.filter((i) => i.optional === true)].map((i, k, arr) => (
+      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional === "kaplan")].map((i, k, arr) => (
         <div key={i.id} style={{ marginBottom: 6 }}>
           {i.optional && (k === 0 || arr[k - 1].optional !== i.optional) && (
-            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>{i.optional === "review" ? "LAST WEEK: MIXED REVIEW" : "ONLY IF THERE'S TIME"}</div>
+            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>{"KAPLAN: ONLY TO RETEACH A TOPIC"}</div>
           )}
           <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
           <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
@@ -1395,23 +1429,78 @@ function TodayCard({ weekDone, toggleWeek, todayKey, notes, addNote }) {
 
       <Lane title="📐 MATH" isMath today={mToday} next={mNext} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote}
         note={mToday.length ? `✓ ${mToday.length} today` : "start here"} />
+      <WeakSpots />
       <Lane title="📖 ELA" today={eToday} next={eNext} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote}
         note={eToday.length ? `✓ ${eToday.length} today` : elaDue ? "1 due today" : "if you have time"} />
 
-      <Warmup weekDone={weekDone} toggleWeek={toggleWeek} todayKey={todayKey} />
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} notes={notes} />
     </div>
   );
 }
 
-// ---- WARM-UP tab -------------------------------------------------------
+// His math gaps from all four diagnostics (missed on 3–4 of them), with the
+// Kaplan lesson to reteach each one. For when a redo shows he's really stuck.
+const WEAK_SPOTS = [
+  ["Fractions, simplify before multiplying", "11.1", 326],
+  ["Making & solving equations", "12.1", 382],
+  ["Rates & units", "11.5", 356],
+  ["Number lines, inclusive range", "11.2", 334],
+  ["Inequalities", "12.3", 396],
+  ["Area, perimeter, volume", "13.2", 416],
+];
+function WeakSpots() {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button onClick={() => setShow(!show)} style={{ ...S.addNoteBtn, color: "#F2C14E" }}>
+        {show ? "▴" : "▾"} 🎯 Stuck on a topic? Kaplan lesson for it
+      </button>
+      {show && (
+        <div style={{ ...S.body, fontSize: 12.5, color: "#C9D2E0", lineHeight: 1.7, margin: "4px 2px 0" }}>
+          {WEAK_SPOTS.map(([t, l, p]) => (
+            <div key={l}>{t} → <b>{l}</b> <span style={{ ...S.mono, fontSize: 10.5, color: "#6FA8FF" }}>p.{p}</span></div>
+          ))}
+          <div style={{ color: "#8A94A8", fontSize: 12 }}>Just the Perform questions. Answers p.{MATH_ANSWERS_PAGE}.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- DIAGNOSTICS tab ---------------------------------------------------
+// His four practice tests, to go over with Depinder or Khan whenever there's
+// time. Same ✓ / Ask tutor / notes as lessons (new ids, same saved place).
+const DIAGS = [
+  { id: "d1",  lesson: "Diag R: wrong math", page: "Nov 7 · double time", topic: "Math 22/50 · 28 to redo", text: "" },
+  { id: "d20", lesson: "Diag R: wrong ELA", page: "Nov 7 · double time", topic: "ELA 30/50 · grammar ones first", text: "" },
+  { id: "d2",  lesson: "Diag H: wrong math", page: "Sept 26 (and Oct 18)", topic: "Math 23/50", text: "" },
+  { id: "d21", lesson: "Diag H: wrong ELA", page: "Sept 26 (and Oct 18)", topic: "Just the grammar ones", text: "" },
+  { id: "d4",  lesson: "Diag G: wrong math", page: "Aug 30", topic: "Math 10/50", text: "" },
+  { id: "d6",  lesson: "Diag F: wrong math", page: "July 4", topic: "Math 16/50", text: "" },
+];
+function DiagTab({ weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
+  return (
+    <div style={{ padding: "4px 16px 4px" }}>
+      <SectionLabel text="GO OVER YOUR PRACTICE TESTS" />
+      <ol style={{ ...S.body, fontSize: 13, color: "#C9D2E0", margin: "0 0 8px", paddingLeft: 20, lineHeight: 1.6 }}>
+        <li>Redo each wrong one on paper. Don't look at the answer.</li>
+        <li>Right this time? It was careless. Read why anyway.</li>
+        <li>Still wrong? Write its # → <b>👨‍🏫 Ask tutor</b>.</li>
+      </ol>
+      <a href="https://thetutorverse.com/books" target="_blank" rel="noopener noreferrer" style={S.siteLink}>📘 Tutorverse answer explanations: thetutorverse.com/books</a>
+      <LessonList title="📋 Diagnostics" items={DIAGS} weekDone={weekDone} toggleWeek={toggleWeek} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} />
+    </div>
+  );
+}
+
+// ---- WARM-UP tab (not shown since Nov 7; Tutorverse is the main plan now) -------------------------------------------------------
 // Just the Tutorverse book: three plain steps, the link to its answer
 // explanations, and the list.
 function WarmupTab({ weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
   return (
     <div style={{ padding: "4px 16px 4px" }}>
-      <SectionLabel text="TUTORVERSE WARM-UP · 15 MIN BEFORE KAPLAN" />
+      <SectionLabel text="TUTORVERSE WARM-UP · 15 MIN A DAY" />
       <ol style={{ ...S.body, fontSize: 13, color: "#C9D2E0", margin: "0 0 8px", paddingLeft: 20, lineHeight: 1.6 }}>
         <li>Do the first half of the set.</li>
         <li>Check your answers in the back: grammar p.298, math p.300–302, Form B p.303.</li>
@@ -1501,6 +1590,11 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek, notes, a
 
 // His steps for each subject, in his words (from Depinder). Shown on every card.
 const STEPS = {
+  // Diagnostic redo: trying alone first shows careless vs. really stuck.
+  tvm: ["Do the whole set.", "Check it: answers p.300–302.", "Wrong ones: read why (link in Diagnostics tab), redo. Still stuck → 👨‍🏫 Ask tutor."],
+  tve: ["Read the rule, do the whole set.", "Check it: answers p.298.", "Wrong ones: read why, redo. Still stuck → 👨‍🏫 Ask tutor."],
+  redo: ["Redo each wrong one on paper. Don't look at the answer.", "Right this time? It was careless. Slow down on those.", "Still wrong? Write its # → 👨‍🏫 Ask tutor."],
+  test: ["Saturday morning, like test day. Double time.", "One sitting, with breaks like the real test.", "Answer every question. Check them with the extra time."],
   math: ["Go through the lesson.", `Get it? Do the Perform set (answers p.${MATH_ANSWERS_PAGE}).`, "Wrong ones: circle them → 👨‍🏫 Ask tutor."],
   ela: ["Read the lesson till you get it.", `Do the topic test at the end (answers p.${ELA_ANSWERS_PAGE}).`, "Wrong ones: highlight them → 👨‍🏫 Ask tutor."],
 };
@@ -1524,7 +1618,7 @@ function HeroTask({ i, isMath, toggleWeek, subj, canStep, onStep, picked, onRese
       {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>{i.page}</div>}
       {i.text && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
       <ol style={{ ...S.body, fontSize: 12.5, color: "#B8C2D4", margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
-        {STEPS[isMath ? "math" : "ela"].map((t) => <li key={t}>{t}</li>)}
+        {STEPS[i.steps || (isMath ? "math" : "ela")].map((t) => <li key={t}>{t}</li>)}
       </ol>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <button onClick={() => toggleWeek(i.id)} aria-label={`Done ${i.lesson}`} style={{ ...S.heroBtn, background: "#3DDC97", color: "#0B0E14" }}>✓ ALL RIGHT</button>

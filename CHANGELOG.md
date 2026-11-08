@@ -35,8 +35,9 @@ from watching my brother actually use it. Each version's full code is in
 | 26 | Oct 25 | [Pick a lesson](versions/2026-10-25-v26-pick-a-lesson.jsx) |
 | — | Oct 25 | Removed Lesson 4.7 |
 | — | Nov 2 | Progress reports switched on |
-| 27 | Nov 2 | [Tutorverse warm-ups (current)](versions/2026-11-02-v27-warm-ups.jsx) |
+| 27 | Nov 2 | [Tutorverse warm-ups](versions/2026-11-02-v27-warm-ups.jsx) |
 | — | Nov 2 | "Only if there's time" lessons |
+| 28 | Nov 7 | [Final stretch: Tutorverse + Diagnostics (current)](versions/2026-11-07-v28-diagnostic-redos.jsx) |
 
 ---
 
@@ -298,7 +299,7 @@ tutor plans a different one. Switching used to mean going to the Lessons tab.
 - The Google Sheet's script is deployed, and the app now sends its updates to
   it (v22). Checked end to end: an update from the page filled in the Sheet.
 
-### v27 · Nov 2 · Tutorverse warm-ups (current)
+### v27 · Nov 2 · Tutorverse warm-ups
 - A 15-minute warm-up before Kaplan from a second book (The Tutorverse): short
   drills on what his practice tests kept missing, like modifiers, subject-verb
   agreement, fractions and percents. Then its full practice test and mixed
@@ -357,3 +358,26 @@ his Kaplan goal, the weekly totals or the Sheet.
 - `?demo&reset` wipes the demo copy back to the clean sample and sends that to
   the demo Sheet, so each recording or showing starts fresh. Real data is
   never touched.
+
+### v28 · Nov 7 · Final stretch: Tutorverse + Diagnostics tab (current)
+- The Math lane now goes straight through the Tutorverse sections for his
+  repeat misses, two a day with the planned day on each card: Numbers,
+  Operations, Fractions, Word Problems, Expressions & Equations, Algebra in
+  Context, Plugins, Inequalities, Area & Perimeter, Volume, Measurements, then
+  two mixed sets, Form B on Sat Nov 14 and going over it Sunday.
+- The ELA lane is just the grammar rules he missed: comma splices, modifiers,
+  commas in a list, tense shifts, pronouns.
+- Whole sets now, not half. Each card says: do it, check it, read why for the
+  wrong ones and redo them, still stuck goes to the tutor.
+- New Diagnostics tab (replaces Warm-up): his four practice tests, wrong math
+  and wrong ELA, to go over with me or his tutor. Same ✓, Ask tutor and notes.
+- Every Kaplan lesson moved to a "Kaplan: only to reteach a topic" group. The
+  ‹ › arrows still reach them, and "🎯 Stuck on a topic?" under Math lists the
+  Kaplan lesson for each weak spot.
+
+**Why:** the Nov 7 diagnostic, his first at double time, scored the same as
+September even though he used the extra time. His misses are mostly the same
+basics on every test (fractions, setting up equations, rates, number lines),
+things he gets right one test and wrong the next, so they look like rust.
+Short, targeted practice on exactly those beats new Kaplan lessons with 11
+days left.
