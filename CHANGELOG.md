@@ -37,7 +37,8 @@ from watching my brother actually use it. Each version's full code is in
 | — | Nov 2 | Progress reports switched on |
 | 27 | Nov 2 | [Tutorverse warm-ups](versions/2026-11-02-v27-warm-ups.jsx) |
 | — | Nov 2 | "Only if there's time" lessons |
-| 28 | Nov 7 | [Final stretch: Tutorverse + Diagnostics (current)](versions/2026-11-07-v28-diagnostic-redos.jsx) |
+| 28 | Nov 7 | [Final stretch: Tutorverse + Diagnostics](versions/2026-11-07-v28-diagnostic-redos.jsx) |
+| 29 | Nov 15 | [Kaplan folded away, Tutorverse by priority (current)](versions/2026-11-15-v29-kaplan-shelf.jsx) |
 
 ---
 
@@ -359,7 +360,7 @@ his Kaplan goal, the weekly totals or the Sheet.
   the demo Sheet, so each recording or showing starts fresh. Real data is
   never touched.
 
-### v28 · Nov 7 · Final stretch: Tutorverse + Diagnostics tab (current)
+### v28 · Nov 7 · Final stretch: Tutorverse + Diagnostics tab
 - The Math lane now goes straight through the Tutorverse sections for his
   repeat misses, two a day with the planned day on each card: Numbers,
   Operations, Fractions, Word Problems, Expressions & Equations, Algebra in
@@ -381,3 +382,20 @@ basics on every test (fractions, setting up equations, rates, number lines),
 things he gets right one test and wrong the next, so they look like rust.
 Short, targeted practice on exactly those beats new Kaplan lessons with 11
 days left.
+
+### v29 · Nov 15 · Kaplan folded away, Tutorverse by priority (current)
+- Kaplan lessons left the Today ‹ › arrows and the Lessons lists. They sit in
+  a folded "📚 Kaplan (only if you're stuck on a topic)" section at the
+  bottom of the Lessons tab, with his old checks inside.
+- Math sets are now in order of how much they matter for him: Equations,
+  Algebra in Context, Area & Perimeter, Measurements, then new "if time" sets
+  Ratios & Proportions (p.193) and Factors & Exponents (p.197), then the rest.
+- ELA adds Subject-Verb Agreement (p.55) and Within-Sentence Punctuation (p.62).
+  The grammar sets he already did come first in the list, so "Next" points at
+  comma splices instead of skipping ahead to the Form B redo.
+- Removed the day labels (Sun 11/8 and so on). The test date may move.
+
+**Why:** he only uses Tutorverse now, so Kaplan was just in the way. He did
+the pronoun, modifier and tense sets this weekend and the app was sending him
+past comma splices and commas in a list.
+

@@ -911,22 +911,26 @@ const KAPLAN_PLAN = {
     // sections for the basics he keeps missing (whole sets, not half), then
     // Form B. Redoing the diagnostics is its own tab. New ids (t..., d...) so
     // nothing old moves. "day" is the plan, not a lock: he can go faster.
-    { id: "t1",  lesson: "Numbers", page: "Tutorverse p.180", topic: "Number lines, negatives", text: "Sun 11/8", steps: "tvm" },
-    { id: "t2",  lesson: "Operations", page: "Tutorverse p.184", topic: "Order of operations (PEMDAS)", text: "Sun 11/8", steps: "tvm" },
-    { id: "t3",  lesson: "Fractions", page: "Tutorverse p.189", topic: "Fractions, simplify before you multiply", text: "Mon 11/9", steps: "tvm" },
-    { id: "t4",  lesson: "Word Problems", page: "Tutorverse p.191", topic: "Rates, turning words into math", text: "Mon 11/9", steps: "tvm" },
-    { id: "t5",  lesson: "Expressions & Equations", page: "Tutorverse p.211", topic: "Solving for x", text: "Tue 11/10", steps: "tvm" },
-    { id: "t6",  lesson: "Algebra in Context", page: "Tutorverse p.214", topic: "Making the equation from words", text: "Tue 11/10", steps: "tvm" },
-    { id: "t7",  lesson: "Plugins", page: "Tutorverse p.216", topic: "Plug in numbers (odd/even with letters)", text: "Wed 11/11", steps: "tvm" },
-    { id: "t8",  lesson: "Inequalities", page: "Tutorverse p.219", topic: "Inequalities, number lines", text: "Wed 11/11", steps: "tvm" },
-    { id: "t9",  lesson: "Area & Perimeter", page: "Tutorverse p.238", topic: "Area, perimeter", text: "Thu 11/12", steps: "tvm" },
-    { id: "t10", lesson: "Volume", page: "Tutorverse p.243", topic: "Volume", text: "Thu 11/12", steps: "tvm" },
-    { id: "t11", lesson: "Measurements", page: "Tutorverse p.253", topic: "Unit conversion", text: "Thu 11/12", steps: "tvm" },
-    { id: "t12", lesson: "Numbers & Operations Mixed", page: "Tutorverse p.207", topic: "Mixed practice", text: "Fri 11/13", steps: "tvm" },
-    { id: "t13", lesson: "Geometry Mixed", page: "Tutorverse p.260", topic: "Mixed practice", text: "Fri 11/13", steps: "tvm" },
-    { id: "d8",  lesson: "Form B practice test", page: "Tutorverse p.264", topic: "Last full test", text: "Sat 11/14. Not before. Answers p.303.", steps: "test" },
-    { id: "d9",  lesson: "Form B: wrong math", page: "Tutorverse p.264", topic: "Go over with Khan", text: "Sun 11/15", steps: "redo" },
-    { id: "t14", lesson: "Algebra Mixed", page: "Tutorverse p.222", topic: "Mixed practice, light", text: "Mon 11/16", steps: "tvm" },
+    // Nov 15: ordered by how much each one matters for him (his repeat misses
+    // first). No day labels: the test date may move.
+    { id: "t1",  lesson: "Numbers", page: "Tutorverse p.180", topic: "Number lines, negatives", text: "", steps: "tvm" },
+    { id: "t2",  lesson: "Operations", page: "Tutorverse p.184", topic: "Order of operations (PEMDAS)", text: "", steps: "tvm" },
+    { id: "t3",  lesson: "Fractions", page: "Tutorverse p.189", topic: "Fractions, simplify before you multiply", text: "", steps: "tvm" },
+    { id: "t4",  lesson: "Word Problems", page: "Tutorverse p.191", topic: "Rates, turning words into math", text: "", steps: "tvm" },
+    { id: "t5",  lesson: "Expressions & Equations", page: "Tutorverse p.211", topic: "Solving for x", text: "", steps: "tvm" },
+    { id: "t6",  lesson: "Algebra in Context", page: "Tutorverse p.214", topic: "Making the equation from words", text: "", steps: "tvm" },
+    { id: "t9",  lesson: "Area & Perimeter", page: "Tutorverse p.238", topic: "Area, perimeter", text: "", steps: "tvm" },
+    { id: "t11", lesson: "Measurements", page: "Tutorverse p.253", topic: "Unit conversion", text: "", steps: "tvm" },
+    { id: "t15", lesson: "Ratios & Proportions", page: "Tutorverse p.193", topic: "Mostly good at it. Tighten it up", text: "", steps: "tvm" },
+    { id: "t16", lesson: "Factors, Multiples, Exponents", page: "Tutorverse p.197", topic: "Exponent rules", text: "", steps: "tvm" },
+    { id: "t8",  lesson: "Inequalities", page: "Tutorverse p.219", topic: "Inequalities, number lines", text: "", steps: "tvm" },
+    { id: "t7",  lesson: "Plugins", page: "Tutorverse p.216", topic: "Plug in numbers (odd/even with letters)", text: "", steps: "tvm" },
+    { id: "t10", lesson: "Volume", page: "Tutorverse p.243", topic: "Volume", text: "", steps: "tvm" },
+    { id: "t12", lesson: "Numbers & Operations Mixed", page: "Tutorverse p.207", topic: "Mixed practice", text: "", steps: "tvm" },
+    { id: "t13", lesson: "Geometry Mixed", page: "Tutorverse p.260", topic: "Mixed practice", text: "", steps: "tvm" },
+    { id: "d8",  lesson: "Form B practice test", page: "Tutorverse p.264", topic: "Last full test", text: "Double time, one sitting, morning. Answers p.303.", steps: "test" },
+    { id: "d9",  lesson: "Form B: wrong math", page: "Tutorverse p.264", topic: "Go over with Khan", text: "Right after Form B.", steps: "redo" },
+    { id: "t14", lesson: "Algebra Mixed", page: "Tutorverse p.222", topic: "Mixed practice, light", text: "", steps: "tvm" },
     // ---- Kaplan: only to reteach a topic ---------------------------------
     // already done
     { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", text: "Done.", optional: "kaplan" },
@@ -964,12 +968,14 @@ const KAPLAN_PLAN = {
   ela: [
     // Final stretch: mostly math. ELA is just the grammar rules he missed
     // (short, rule-based, fast points). His reading is getting better with Khan.
-    { id: "g1", lesson: "Subordination & Coordination", page: "Tutorverse p.60", topic: "Comma splices", text: "", steps: "tve" },
     { id: "g2", lesson: "Modifiers", page: "Tutorverse p.50", topic: "Misplaced modifiers", text: "", steps: "tve" },
-    { id: "g3", lesson: "Punctuating a Series", page: "Tutorverse p.66", topic: "Commas in a list", text: "", steps: "tve" },
-    { id: "g4", lesson: "Tenses, Mood & Number", page: "Tutorverse p.52", topic: "Tense shifts", text: "", steps: "tve" },
     { id: "g5", lesson: "Pronoun Clarity", page: "Tutorverse p.49", topic: "Pronouns", text: "", steps: "tve" },
-    { id: "d22", lesson: "Form B: wrong ELA", page: "Tutorverse p.264", topic: "Grammar ones first", text: "Sun 11/15", steps: "redo" },
+    { id: "g4", lesson: "Tenses, Mood & Number", page: "Tutorverse p.52", topic: "Tense shifts", text: "", steps: "tve" },
+    { id: "g1", lesson: "Subordination & Coordination", page: "Tutorverse p.60", topic: "Comma splices", text: "", steps: "tve" },
+    { id: "g3", lesson: "Punctuating a Series", page: "Tutorverse p.66", topic: "Commas in a list", text: "", steps: "tve" },
+    { id: "g6", lesson: "Subject-Verb Agreement", page: "Tutorverse p.55", topic: "Missed on 2 older tests", text: "", steps: "tve" },
+    { id: "g7", lesson: "Within-Sentence Punctuation", page: "Tutorverse p.62", topic: "Commas, colons, semicolons", text: "", steps: "tve" },
+    { id: "d22", lesson: "Form B: wrong ELA", page: "Tutorverse p.264", topic: "Grammar ones first", text: "Right after Form B.", steps: "redo" },
     { id: "e1", lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus", optional: "kaplan" },
     { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus", optional: "kaplan" },
     { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong", optional: "kaplan" },
@@ -1266,18 +1272,39 @@ function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNote
       <RemainingLine weekDone={weekDone} todayKey={todayKey} />
       <TutorList weekDone={weekDone} notes={notes} />
       <LessonList title="📐 Math" items={KAPLAN_PLAN.math} {...rowProps} />
-      <LessonList title="📖 ELA" items={KAPLAN_PLAN.ela} note="4.2, 4.4 and 4.5 were done before Oct 12." {...rowProps} />
+      <LessonList title="📖 ELA" items={KAPLAN_PLAN.ela} {...rowProps} />
       <GoneOver notes={notes} toggleNoteDone={toggleNoteDone} />
       <OtherNotes notes={notes} addNote={addNote} deleteNote={deleteNote} />
+      <KaplanShelf rowProps={rowProps} />
+    </div>
+  );
+}
+
+// The old Kaplan lessons, folded away at the bottom. Only for reteaching a
+// topic he's stuck on; his old checks still show inside.
+function KaplanShelf({ rowProps }) {
+  const [show, setShow] = useState(false);
+  const pick = (list) => list.filter((i) => i.optional === "kaplan");
+  return (
+    <div style={{ marginTop: 18 }}>
+      <button onClick={() => setShow(!show)} style={{ ...S.addNoteBtn, color: "#8A94A8" }}>
+        {show ? "▴" : "▾"} 📚 Kaplan (only if you're stuck on a topic)
+      </button>
+      {show && (
+        <>
+          <LessonList title="📐 Kaplan math" items={pick(KAPLAN_PLAN.math)} all {...rowProps} />
+          <LessonList title="📖 Kaplan ELA" items={pick(KAPLAN_PLAN.ela)} all note="4.2, 4.4 and 4.5 were done before Oct 12." {...rowProps} />
+        </>
+      )}
     </div>
   );
 }
 
 // One subject's lessons. A top-level component (not one made inside
 // LessonsTab) so a half-typed note isn't wiped when the screen redraws.
-function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
-  const next = nextIn(items, weekDone);
-  const core = items.filter((i) => !i.optional);
+function LessonList({ title, items, note, all, weekDone, toggleWeek, notes, addNote, toggleNoteDone }) {
+  const next = all ? null : nextIn(items, weekDone);
+  const core = all ? items : items.filter((i) => !i.optional);
   const count = core.filter((i) => isDone(weekDone[i.id])).length;
   return (
     <div style={{ marginTop: 16 }}>
@@ -1286,11 +1313,8 @@ function LessonList({ title, items, note, weekDone, toggleWeek, notes, addNote, 
         <span style={{ ...S.mono, fontSize: 10, color: count === core.length ? "#3DDC97" : "#7A8598" }}>{count}/{core.length}</span>
       </div>
       {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-      {[...items.filter((i) => !i.optional), ...items.filter((i) => i.optional === "kaplan")].map((i, k, arr) => (
+      {(all ? items : items.filter((i) => !i.optional)).map((i) => (
         <div key={i.id} style={{ marginBottom: 6 }}>
-          {i.optional && (k === 0 || arr[k - 1].optional !== i.optional) && (
-            <div style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#7A8598", margin: "12px 2px 6px" }}>{"KAPLAN: ONLY TO RETEACH A TOPIC"}</div>
-          )}
           <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
           <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
         </div>
@@ -1552,7 +1576,8 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek, notes, a
   // on it, "next" moves past it anyway.
   const [pickId, setPickId] = useState(null);
   const all = isMath ? KAPLAN_PLAN.math : KAPLAN_PLAN.ela;
-  const open = [...all.filter((i) => !i.optional), ...all.filter((i) => i.optional)].filter((i) => !weekDone[i.id]);
+  // Only the final plan. Kaplan lives at the bottom of the Lessons tab now.
+  const open = all.filter((i) => !i.optional && !weekDone[i.id]);
   const shown = (pickId && open.find((i) => i.id === pickId)) || next;
   const step = (d) => {
     if (!shown || open.length < 2) return;
