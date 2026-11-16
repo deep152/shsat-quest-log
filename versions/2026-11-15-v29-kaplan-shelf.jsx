@@ -917,10 +917,10 @@ const KAPLAN_PLAN = {
     { id: "t2",  lesson: "Operations", page: "Tutorverse p.184", topic: "Order of operations (PEMDAS)", text: "", steps: "tvm" },
     { id: "t3",  lesson: "Fractions", page: "Tutorverse p.189", topic: "Fractions, simplify before you multiply", text: "", steps: "tvm" },
     { id: "t4",  lesson: "Word Problems", page: "Tutorverse p.191", topic: "Rates, turning words into math", text: "", steps: "tvm" },
-    { id: "t5",  lesson: "Expressions & Equations", page: "Tutorverse p.211", topic: "Solving for x", text: "", steps: "tvm" },
-    { id: "t6",  lesson: "Algebra in Context", page: "Tutorverse p.214", topic: "Making the equation from words", text: "", steps: "tvm" },
-    { id: "t9",  lesson: "Area & Perimeter", page: "Tutorverse p.238", topic: "Area, perimeter", text: "", steps: "tvm" },
-    { id: "t11", lesson: "Measurements", page: "Tutorverse p.253", topic: "Unit conversion", text: "", steps: "tvm" },
+    { id: "t5",  lesson: "Expressions & Equations", page: "Tutorverse p.211", topic: "Solving for x", text: "", steps: "tvm", learn: "Kaplan 12.1 p.382 (you did it Nov 6), or a Khan Academy video on “solving equations”" },
+    { id: "t6",  lesson: "Algebra in Context", page: "Tutorverse p.214", topic: "Making the equation from words", text: "", steps: "tvm", learn: "Kaplan 14.3 p.456, or a Khan Academy video on “writing equations from word problems”" },
+    { id: "t9",  lesson: "Area & Perimeter", page: "Tutorverse p.238", topic: "Area, perimeter", text: "", steps: "tvm", learn: "Kaplan 13.2 p.416, or a Khan Academy video on “area and perimeter”" },
+    { id: "t11", lesson: "Measurements", page: "Tutorverse p.253", topic: "Unit conversion", text: "", steps: "tvm", learn: "a Khan Academy video on “converting units”" },
     { id: "t15", lesson: "Ratios & Proportions", page: "Tutorverse p.193", topic: "Mostly good at it. Tighten it up", text: "", steps: "tvm" },
     { id: "t16", lesson: "Factors, Multiples, Exponents", page: "Tutorverse p.197", topic: "Exponent rules", text: "", steps: "tvm" },
     { id: "t8",  lesson: "Inequalities", page: "Tutorverse p.219", topic: "Inequalities, number lines", text: "", steps: "tvm" },
@@ -1638,10 +1638,16 @@ function HeroTask({ i, isMath, toggleWeek, subj, canStep, onStep, picked, onRese
         <button onClick={onReset} aria-label={`Back to next lesson (${subj})`} style={{ ...S.addNoteBtn, color: "#6FA8FF", marginBottom: 4 }}>↺ back to next</button>
       )}
       {i.tag && <div style={{ ...S.mono, fontSize: 10, color: TAGS[i.tag].color }}>{TAGS[i.tag].label}</div>}
-      <div style={{ ...S.display, fontSize: 22, color: "#E8ECF4", marginTop: i.tag ? 3 : 0 }}>{i.lesson}</div>
+      <div style={{ ...S.display, fontSize: 22, color: "#E8ECF4", marginTop: i.tag ? 3 : 0, paddingRight: canStep ? 76 : 0 }}>{i.lesson}</div>
       <div style={{ ...S.display, fontSize: 15, color: "#C9D2E0", marginTop: 2, lineHeight: 1.3 }}>{i.topic}</div>
       {i.page && <div style={{ ...S.mono, fontSize: 11, color: "#6FA8FF", marginTop: 4 }}>{i.page}</div>}
       {i.text && <div style={{ ...S.body, fontSize: 12.5, color: "#8A94A8", marginTop: 4, lineHeight: 1.45 }}>{i.text}</div>}
+      {i.learn && (
+        // His hardest topics: try a few first, and learn it before grinding a whole set wrong.
+        <div style={{ ...S.body, fontSize: 12.5, color: "#F2C14E", marginTop: 8, lineHeight: 1.5, padding: "8px 10px", border: "1px solid #3A3320", borderRadius: 10 }}>
+          ⚠️ This is one you've been getting wrong. Try the first 3. Most wrong? Stop and learn it first: {i.learn}. Then do the set.
+        </div>
+      )}
       <ol style={{ ...S.body, fontSize: 12.5, color: "#B8C2D4", margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
         {STEPS[i.steps || (isMath ? "math" : "ela")].map((t) => <li key={t}>{t}</li>)}
       </ol>

@@ -398,4 +398,9 @@ days left.
 **Why:** he only uses Tutorverse now, so Kaplan was just in the way. He did
 the pronoun, modifier and tense sets this weekend and the app was sending him
 past comma splices and commas in a list.
-
+- Later on Nov 15: Equations, Algebra in Context, Area & Perimeter and
+  Measurements get a yellow box: "Try the first 3. Most wrong? Stop and learn
+  it first", with the Kaplan lesson or a Khan Academy video to use. Long
+  lesson names now wrap instead of running under the ‹ › buttons.
+  **Why:** these are the topics he keeps getting wrong, so doing a whole set
+  wrong wastes his time. Learning it first does more.
