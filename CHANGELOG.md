@@ -404,3 +404,11 @@ past comma splices and commas in a list.
   lesson names now wrap instead of running under the ‹ › buttons.
   **Why:** these are the topics he keeps getting wrong, so doing a whole set
   wrong wastes his time. Learning it first does more.
+- Nov 17: a "🏁 END REVIEW: MIXED PRACTICE" divider in both lists. Math: the
+  mixed sets and Form B sit under it. ELA: Passage-Based Revising (p.72, a
+  couple of passages) plus one nonfiction and one fiction/poetry passage
+  (p.95, p.139) if there's time.
+  **Why:** Tutorverse has no ELA mixed set, and passage-based revising is the
+  closest thing to how the real test asks grammar. The divider shows where the
+  topic sets end and the mixed review starts.
+

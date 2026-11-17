@@ -978,11 +978,11 @@ const KAPLAN_PLAN = {
     { id: "t8",  lesson: "Inequalities", page: "Tutorverse p.219", topic: "Inequalities, number lines", text: "", steps: "tvm" },
     { id: "t7",  lesson: "Plugins", page: "Tutorverse p.216", topic: "Plug in numbers (odd/even with letters)", text: "", steps: "tvm" },
     { id: "t10", lesson: "Volume", page: "Tutorverse p.243", topic: "Volume", text: "", steps: "tvm" },
-    { id: "t12", lesson: "Numbers & Operations Mixed", page: "Tutorverse p.207", topic: "Mixed practice", text: "", steps: "tvm" },
-    { id: "t13", lesson: "Geometry Mixed", page: "Tutorverse p.260", topic: "Mixed practice", text: "", steps: "tvm" },
-    { id: "d8",  lesson: "Form B practice test", page: "Tutorverse p.264", topic: "Last full test", text: "Double time, one sitting, morning. Answers p.303.", steps: "test" },
-    { id: "d9",  lesson: "Form B: wrong math", page: "Tutorverse p.264", topic: "Go over with Khan", text: "Right after Form B.", steps: "redo" },
-    { id: "t14", lesson: "Algebra Mixed", page: "Tutorverse p.222", topic: "Mixed practice, light", text: "", steps: "tvm" },
+    { id: "t12", lesson: "Numbers & Operations Mixed", page: "Tutorverse p.207", topic: "Mixed practice", text: "", steps: "tvm", group: "end" },
+    { id: "t13", lesson: "Geometry Mixed", page: "Tutorverse p.260", topic: "Mixed practice", text: "", steps: "tvm", group: "end" },
+    { id: "d8",  lesson: "Form B practice test", page: "Tutorverse p.264", topic: "Last full test", text: "Double time, one sitting, morning. Answers p.303.", steps: "test", group: "end" },
+    { id: "d9",  lesson: "Form B: wrong math", page: "Tutorverse p.264", topic: "Go over with Khan", text: "Right after Form B.", steps: "redo", group: "end" },
+    { id: "t14", lesson: "Algebra Mixed", page: "Tutorverse p.222", topic: "Mixed practice, light", text: "", steps: "tvm", group: "end" },
     // ---- Kaplan: only to reteach a topic ---------------------------------
     // already done
     { id: "m1",  lesson: "Lesson 10.1", page: "page 300", topic: "Basic Terms & Translation", text: "Done.", optional: "kaplan" },
@@ -1028,6 +1028,11 @@ const KAPLAN_PLAN = {
     { id: "g6", lesson: "Subject-Verb Agreement", page: "Tutorverse p.55", topic: "Missed on 2 older tests", text: "", steps: "tve" },
     { id: "g7", lesson: "Within-Sentence Punctuation", page: "Tutorverse p.62", topic: "Commas, colons, semicolons", text: "", steps: "tve" },
     { id: "d22", lesson: "Form B: wrong ELA", page: "Tutorverse p.264", topic: "Grammar ones first", text: "Right after Form B.", steps: "redo" },
+    // End review: grammar inside passages, the way the real test asks it. The
+    // reading passages are optional extra; Khan already covers reading.
+    { id: "g8", lesson: "Passage-Based Revising", page: "Tutorverse p.72", topic: "A couple of passages, not all", text: "Best mixed ELA practice: like the real test.", steps: "tvr", group: "end" },
+    { id: "g9", lesson: "Reading: Nonfiction", page: "Tutorverse p.95", topic: "If there's time: 1 passage", text: "", steps: "tvr", group: "end" },
+    { id: "g10", lesson: "Reading: Fiction & Poetry", page: "Tutorverse p.139", topic: "If there's time: 1 passage", text: "", steps: "tvr", group: "end" },
     { id: "e1", lesson: "Lesson 4.1", page: "pages 52–63", topic: "Sentence Structure & Modifier Placement", text: "Redo only the questions you got wrong before.", tag: "focus", optional: "kaplan" },
     { id: "e2",  lesson: "Lesson 4.3", page: "pages 78–94", topic: "Usage", text: "Redo only your wrong ones.", tag: "focus", optional: "kaplan" },
     { id: "e3",  lesson: "Lesson 4.6", page: "page 119", topic: "Organization & Topic Development", text: "The test questions are just before page 137.", tag: "strong", optional: "kaplan" },
@@ -1332,6 +1337,17 @@ function LessonsTab({ weekDone, toggleWeek, todayKey, notes, addNote, toggleNote
   );
 }
 
+// Splits the topic sets from the end review (mixed practice, Form B).
+function EndDivider() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "16px 2px 8px" }}>
+      <div style={{ flex: 1, height: 1, background: "#2A3346" }} />
+      <span style={{ ...S.mono, fontSize: 10, letterSpacing: 1.5, color: "#F2C14E" }}>🏁 END REVIEW: MIXED PRACTICE</span>
+      <div style={{ flex: 1, height: 1, background: "#2A3346" }} />
+    </div>
+  );
+}
+
 // The old Kaplan lessons, folded away at the bottom. Only for reteaching a
 // topic he's stuck on; his old checks still show inside.
 function KaplanShelf({ rowProps }) {
@@ -1365,8 +1381,9 @@ function LessonList({ title, items, note, all, weekDone, toggleWeek, notes, addN
         <span style={{ ...S.mono, fontSize: 10, color: count === core.length ? "#3DDC97" : "#7A8598" }}>{count}/{core.length}</span>
       </div>
       {note && <div style={{ ...S.body, fontSize: 12, color: "#7A8598", margin: "-2px 2px 8px" }}>{note}</div>}
-      {(all ? items : items.filter((i) => !i.optional)).map((i) => (
+      {(all ? items : items.filter((i) => !i.optional)).map((i, k, arr) => (
         <div key={i.id} style={{ marginBottom: 6 }}>
+          {i.group === "end" && (k === 0 || arr[k - 1].group !== "end") && <EndDivider />}
           <PlanRow i={i} value={weekDone[i.id]} isNext={next && next.id === i.id} toggleWeek={toggleWeek} showTutor />
           <LessonNotes i={i} notes={notes} addNote={addNote} toggleNoteDone={toggleNoteDone} ask={isTutor(weekDone[i.id])} />
         </div>
@@ -1669,6 +1686,7 @@ function Lane({ title, isMath, today, next, note, weekDone, toggleWeek, notes, a
 const STEPS = {
   // Diagnostic redo: trying alone first shows careless vs. really stuck.
   tvm: ["Do the whole set.", "Check it: answers p.300–302.", "Wrong ones: read why (link in Diagnostics tab), redo. Still stuck → 👨‍🏫 Ask tutor."],
+  tvr: ["Do it like the real test: read, then answer.", "Check it: answers p.299–300.", "Wrong ones: read why, redo. Still stuck → 👨‍🏫 Ask tutor."],
   tve: ["Read the rule, do the whole set.", "Check it: answers p.298.", "Wrong ones: read why, redo. Still stuck → 👨‍🏫 Ask tutor."],
   redo: ["Redo each wrong one on paper. Don't look at the answer.", "Right this time? It was careless. Slow down on those.", "Still wrong? Write its # → 👨‍🏫 Ask tutor."],
   test: ["Saturday morning, like test day. Double time.", "One sitting, with breaks like the real test.", "Answer every question. Check them with the extra time."],
