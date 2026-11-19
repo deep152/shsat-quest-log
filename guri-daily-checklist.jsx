@@ -376,6 +376,7 @@ export default function GuriQuestLog() {
       {tab === "today" && (
         <TodayTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, plan, dayType, daysIntoWeek, checked, toggleCheck, times, study, kaplanMs, kaplanDone, week, khansQ, updateKhansQ, phoneMs, phoneOn, allDone, spamming, startCat, takeBreak, backToIt, stopStudy, togglePhone, justUnlocked, daysCleared }} />
       )}
+      {tab === "plan" && <PlanTab />}
       {tab === "diag" && <DiagTab {...{ weekDone, toggleWeek, notes, addNote, toggleNoteDone }} />}
       {tab === "todo" && <LessonsTab {...{ weekDone, toggleWeek, todayKey: dateKey, notes, addNote, toggleNoteDone, deleteNote }} />}
       {tab === "calendar" && <CalendarTab completedDates={completedDates} todayKey={dateKey} weekDone={weekDone} todayTimes={times} />}
@@ -390,8 +391,9 @@ export default function GuriQuestLog() {
 function TabBar({ tab, setTab }) {
   const tabs = [
     { id: "today", label: "Today" },
+    { id: "plan", label: "Plan" },
     { id: "todo", label: "Lessons" },
-    { id: "diag", label: "Diagnostics" },
+    { id: "diag", label: "Tests" },
     { id: "calendar", label: "Calendar" },
   ];
   return (
@@ -1505,6 +1507,94 @@ function WeakSpots() {
           <div style={{ color: "#8A94A8", fontSize: 12 }}>Just the Perform questions. Answers p.{MATH_ANSWERS_PAGE}.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- PLAN tab ------------------------------------------------------------
+// A short, hand-written plan in the order he should do things (set by
+// Depinder, written in here). Not called "Today" on purpose: it's a guide, not
+// a deadline. Each day's items get new ids (date prefix) so old checks never
+// carry over. Video links are YouTube searches for the exact Khan Academy
+// titles, so they keep working even if a video moves.
+const yt = (q) => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
+const PLAN = {
+  title: "Thursday",
+  sections: [
+    { label: "AFTER SCHOOL · 3:00–4:30", items: [
+      { id: "1119a", text: "Watch 2 short videos first", videos: [
+        ["Clauses (what they are)", "Dependent and independent clauses Khan Academy"],
+        ["Commas, semicolons, colons", "Khan Academy Writing within-sentence punctuation basic example"],
+      ] },
+      { id: "1119b", text: "Within-Sentence Punctuation", page: "Tutorverse p.62" },
+      { id: "1119c", text: "Commas in a list", page: "Tutorverse p.66" },
+      { id: "1119d", text: "Finish the 7 equations questions", page: "Tutorverse p.211" },
+    ] },
+    { label: "AT THE TUTOR · 4:30", items: [
+      { id: "1119e", text: "Factors questions, or whatever the tutor says", page: "Tutorverse p.199" },
+      { id: "1119f", text: "Got to probability before? Ask about the ones you weren't sure of", page: "Tutorverse p.226 / p.230" },
+    ] },
+    { label: "AFTER THE TUTOR · ONLY IF YOU HAVE ENERGY", items: [
+      { id: "1119g", text: "Inequalities", page: "Tutorverse p.219" },
+      { id: "1119h", text: "1 passage", page: "Passage-Based Revising p.72" },
+      { id: "1119i", text: "More punctuation: video, then the set", page: "Tutorverse p.64 · p.68 · p.70", videos: [
+        ["End of sentence (p.64)", "Khan Academy Writing end-of-sentence punctuation basic example"],
+        ["Extra info in commas (p.68)", "Khan Academy Writing nonrestrictive and parenthetical elements basic example"],
+        ["Too many commas (p.70)", "Khan Academy unnecessary punctuation SAT writing"],
+      ] },
+      { id: "1119j", text: "Probability videos, then try a few", page: "Tutorverse p.226 · p.230", videos: [
+        ["Probability", "Khan Academy intro to theoretical probability"],
+        ["Mean, median, mode", "Khan Academy finding mean median and mode"],
+      ] },
+    ] },
+  ],
+};
+
+function PlanTab() {
+  const [done, setDone] = useState({});
+  useEffect(() => {
+    (async () => {
+      try { const r = await window.storage.get("guri-plan"); if (r?.value) setDone(JSON.parse(r.value)); } catch (e) {}
+    })();
+  }, []);
+  const toggle = (id) => {
+    const next = { ...done };
+    if (next[id]) delete next[id]; else next[id] = dateKeyFor(new Date());
+    setDone(next);
+    try { window.storage.set("guri-plan", JSON.stringify(next)).catch(() => {}); } catch (e) {}
+  };
+  return (
+    <div style={{ padding: "4px 16px 4px" }}>
+      <div style={{ ...S.body, fontSize: 13, color: "#8A94A8", margin: "4px 2px 10px", lineHeight: 1.5 }}>
+        In order. Stuck on one question? Circle it and skip. Missing 1 out of 8 is fine.
+      </div>
+      {PLAN.sections.map((sec) => (
+        <div key={sec.label} style={{ marginBottom: 14 }}>
+          <SectionLabel text={sec.label} />
+          {sec.items.map((i) => {
+            const on = !!done[i.id];
+            return (
+              <div key={i.id} style={{ ...S.heroTask, padding: "10px 12px", marginTop: 6, opacity: on ? 0.55 : 1 }}>
+                <button onClick={() => toggle(i.id)} aria-label={`Plan ${i.text}`}
+                  style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "none", border: "none", padding: 0, textAlign: "left", width: "100%", cursor: "pointer" }}>
+                  <span style={{ flex: "0 0 22px", height: 22, borderRadius: 6, border: `2px solid ${on ? "#3DDC97" : "#3A4458"}`, background: on ? "#3DDC97" : "transparent", color: "#0B0E14", fontSize: 14, lineHeight: "18px", textAlign: "center" }}>{on ? "✓" : ""}</span>
+                  <span>
+                    <span style={{ ...S.display, fontSize: 15, color: "#E8ECF4", textDecoration: on ? "line-through" : "none" }}>{i.text}</span>
+                    {i.page && <span style={{ ...S.mono, display: "block", fontSize: 11, color: "#6FA8FF", marginTop: 3 }}>{i.page}</span>}
+                  </span>
+                </button>
+                {i.videos && (
+                  <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {i.videos.map(([label, q]) => (
+                      <a key={label} href={yt(q)} target="_blank" rel="noopener noreferrer" style={{ ...S.siteLink, padding: "8px 10px", fontSize: 12.5 }}>▶ {label}</a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

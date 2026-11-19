@@ -22,7 +22,7 @@ on his phone every day, so **never break his saved progress**.
 1. **Never rename ids or storage keys.** Task ids (`m4`, `e1`, …) and storage
    keys (`guri-day:*`, `guri-study:*`, `guri-kaplanweek:2026-10-12`,
    `guri-completed-dates`, `guri-notes`, `guri-khansq:*`, `guri-report-queue`,
-   `guri-report-last`, `guri-report-device`) are how his progress is saved. Renaming one silently
+   `guri-report-last`, `guri-report-device`, `guri-plan`) are how his progress is saved. Renaming one silently
    wipes his history. New things get new ids.
 2. **Old saved data has to keep working.** Example: checks used to be saved as
    `true` and are now saved as a date. Both still count as done. A lesson can

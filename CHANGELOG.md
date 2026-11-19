@@ -38,7 +38,8 @@ from watching my brother actually use it. Each version's full code is in
 | 27 | Nov 2 | [Tutorverse warm-ups](versions/2026-11-02-v27-warm-ups.jsx) |
 | — | Nov 2 | "Only if there's time" lessons |
 | 28 | Nov 7 | [Final stretch: Tutorverse + Diagnostics](versions/2026-11-07-v28-diagnostic-redos.jsx) |
-| 29 | Nov 15 | [Kaplan folded away, Tutorverse by priority (current)](versions/2026-11-15-v29-kaplan-shelf.jsx) |
+| 29 | Nov 15 | [Kaplan folded away, Tutorverse by priority](versions/2026-11-15-v29-kaplan-shelf.jsx) |
+| 30 | Nov 19 | [Plan tab (current)](versions/2026-11-19-v30-plan-tab.jsx) |
 
 ---
 
@@ -383,7 +384,7 @@ things he gets right one test and wrong the next, so they look like rust.
 Short, targeted practice on exactly those beats new Kaplan lessons with 11
 days left.
 
-### v29 · Nov 15 · Kaplan folded away, Tutorverse by priority (current)
+### v29 · Nov 15 · Kaplan folded away, Tutorverse by priority
 - Kaplan lessons left the Today ‹ › arrows and the Lessons lists. They sit in
   a folded "📚 Kaplan (only if you're stuck on a topic)" section at the
   bottom of the Lessons tab, with his old checks inside.
@@ -411,4 +412,19 @@ past comma splices and commas in a list.
   **Why:** Tutorverse has no ELA mixed set, and passage-based revising is the
   closest thing to how the real test asks grammar. The divider shows where the
   topic sets end and the mixed review starts.
+
+### v30 · Nov 19 · Plan tab (current)
+- New **Plan** tab, second in the bar: a short hand-written plan in the order
+  he should do things, split into "after school", "at the tutor" and "after
+  the tutor, only if you have energy". Each step has a checkbox and its page;
+  the grammar and probability steps have ▶ buttons that open a YouTube search
+  for the exact Khan Academy video.
+- Saved under a new storage key, `guri-plan`. Each day's steps get new ids
+  (date prefix), so old checks don't carry over.
+- The Diagnostics tab is now labeled "Tests" so five tabs fit at phone width.
+  Its id is still `diag`.
+
+**Why:** the test moved to Nov 25 and the plan now changes day to day (videos
+first, then the set, then the tutor). Spoken instructions were easy to forget.
+It's called "Plan", not "Today", so it reads as a guide, not a deadline.
 
