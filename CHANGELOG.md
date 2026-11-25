@@ -427,4 +427,9 @@ past comma splices and commas in a list.
 **Why:** the test moved to Nov 25 and the plan now changes day to day (videos
 first, then the set, then the tutor). Spoken instructions were easy to forget.
 It's called "Plan", not "Today", so it reads as a guide, not a deadline.
+- Nov 24: Plan tab set for Tuesday night: the practice page of questions like
+  his 14 misses on official test C, then one page of Nonfiction reading
+  (p.95), with a reminder for what to do with wrong answers.
+  **Why:** the test moved to Dec 12 and he went over the 14 with his tutor
+  today, so tonight checks it with new questions.
 
