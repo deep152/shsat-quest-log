@@ -432,4 +432,12 @@ It's called "Plan", not "Today", so it reads as a guide, not a deadline.
   (p.95), with a reminder for what to do with wrong answers.
   **Why:** the test moved to Dec 12 and he went over the 14 with his tutor
   today, so tonight checks it with new questions.
+- Nov 26: Plan tab for Thursday (tutor at 3): the practice page with a box to
+  type which question numbers he got wrong, going over those plus finishing
+  Probability & Stats Mixed (p.234) at the tutor, and one page of Fiction &
+  Poetry (p.139) tonight. Plan steps can now have a text box; what he types is
+  saved in `guri-plan` under `note:<id>`.
+  **Why:** he got a couple of the practice questions wrong again, and those
+  numbers need to reach the tutor. He's done three nonfiction pages, so it's
+  fiction's turn.
 

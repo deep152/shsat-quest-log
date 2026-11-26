@@ -1571,14 +1571,18 @@ function WeakSpots() {
 // titles, so they keep working even if a video moves.
 const yt = (q) => "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
 const PLAN = {
-  title: "Tuesday night",
+  title: "Thursday",
   sections: [
-    { label: "TONIGHT", items: [
-      { id: "1124a", text: "Practice page: questions like the 14 you missed on test C", page: "Emailed to you · do it alone, then check" },
-      { id: "1124b", text: "Reading: 1 page of Nonfiction", page: "Tutorverse p.95 · check answers at the end" },
+    { label: "BEFORE THE TUTOR · 3:00", items: [
+      { id: "1126a", text: "Practice page: questions like the 14 you missed on test C", page: "Emailed to you · do it alone, then check",
+        ask: "Which numbers did you get wrong? (like 3, 7)" },
     ] },
-    { label: "FOR EVERY WRONG ONE", items: [
-      { id: "1124c", text: "Math: read why, then redo it. Reading: find the line in the passage that proves the right answer." },
+    { label: "AT THE TUTOR", items: [
+      { id: "1126b", text: "Go over the ones you got wrong on the practice page" },
+      { id: "1126c", text: "Finish Probability & Stats Mixed", page: "Tutorverse p.234" },
+    ] },
+    { label: "TONIGHT", items: [
+      { id: "1126d", text: "Reading: 1 page of Fiction & Poetry", page: "Tutorverse p.139 · check answers at the end" },
     ] },
   ],
 };
@@ -1593,6 +1597,14 @@ function PlanTab() {
   const toggle = (id) => {
     const next = { ...done };
     if (next[id]) delete next[id]; else next[id] = dateKeyFor(new Date());
+    setDone(next);
+    try { window.storage.set("guri-plan", JSON.stringify(next)).catch(() => {}); } catch (e) {}
+  };
+  // Typed answers (like which questions he got wrong) sit next to the checks,
+  // under "note:<id>", so one key holds the whole plan.
+  const setNote = (id, text) => {
+    const next = { ...done, ["note:" + id]: text };
+    if (!text) delete next["note:" + id];
     setDone(next);
     try { window.storage.set("guri-plan", JSON.stringify(next)).catch(() => {}); } catch (e) {}
   };
@@ -1616,6 +1628,10 @@ function PlanTab() {
                     {i.page && <span style={{ ...S.mono, display: "block", fontSize: 11, color: "#6FA8FF", marginTop: 3 }}>{i.page}</span>}
                   </span>
                 </button>
+                {i.ask && (
+                  <input value={done["note:" + i.id] || ""} onChange={(e) => setNote(i.id, e.target.value)} placeholder={i.ask}
+                    style={{ ...S.body, marginTop: 8, width: "100%", boxSizing: "border-box", fontSize: 14, color: "#E8ECF4", background: "#0E1219", border: "1px solid #2A3242", borderRadius: 8, padding: "9px 10px" }} />
+                )}
                 {i.videos && (
                   <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                     {i.videos.map(([label, q]) => (
