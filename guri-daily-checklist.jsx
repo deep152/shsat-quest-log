@@ -1526,14 +1526,14 @@ const PLAN = {
         ask: "Which numbers did you get wrong? (like 3, 7)" },
       { id: "1126e", text: "Geometry Mixed", page: "Tutorverse p.260 · 4 of your 14 misses were geometry" },
       { id: "1126f", text: "Finish Algebra Mixed (the rest after #15)", page: "Tutorverse p.222" },
-      { id: "1126g", text: "Within-Sentence Punctuation", page: "Tutorverse p.62 · you watched the videos" },
-      { id: "1126h", text: "Commas in a list", page: "Tutorverse p.66" },
     ] },
     { label: "AT THE TUTOR", items: [
       { id: "1126b", text: "Go over the ones you got wrong on the practice page" },
       { id: "1126c", text: "Finish Probability & Stats Mixed", page: "Tutorverse p.234" },
     ] },
     { label: "TONIGHT", items: [
+      { id: "1126g", text: "Within-Sentence Punctuation", page: "Tutorverse p.62 · you watched the videos" },
+      { id: "1126h", text: "Commas in a list", page: "Tutorverse p.66" },
       { id: "1126d", text: "Reading: 1 page of Fiction & Poetry", page: "Tutorverse p.139 · check answers at the end" },
     ] },
   ],

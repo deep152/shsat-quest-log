@@ -444,4 +444,6 @@ It's called "Plan", not "Today", so it reads as a guide, not a deadline.
   (p.222), Within-Sentence Punctuation (p.62) and Commas in a list (p.66) before
   the tutor. **Why:** he has about 3½ hours before 3:00, and these were still
   open in his progress.
+- Nov 26: moved the two punctuation sets (p.62, p.66) from before the tutor to
+  tonight. **Why:** his brother wants the time before 3:00 to go to math.
 
