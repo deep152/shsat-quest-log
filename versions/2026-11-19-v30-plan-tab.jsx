@@ -1524,9 +1524,9 @@ const PLAN = {
     { label: "BEFORE THE TUTOR · 3:00", items: [
       { id: "1126a", text: "Practice page: questions like the 14 you missed on test C", page: "Emailed to you · do it alone, then check",
         ask: "Which numbers did you get wrong? (like 3, 7)" },
-      { id: "1126i", text: "Geometry video: pause at each question, try it, then watch how they do it",
-        page: "Even if you got it right, learn their way (like the midpoint formula, for when you can't count on a grid)",
-        videos: [["Geometry questions", "https://youtu.be/Sc34mfWfRis"]] },
+      { id: "1126i", text: "Angles playlist (7 short videos): pause at each question, try it, then watch how they do it",
+        page: "Even if you got it right, learn their way",
+        videos: [["Angles playlist", "https://youtube.com/playlist?list=PLbfGzZUGDDnQ"]] },
       { id: "1126e", text: "Geometry & Measurements Mixed", page: "Tutorverse p.260 · 4 of your 14 misses were geometry" },
       { id: "1126f", text: "Finish Algebra Mixed (the rest after #15)", page: "Tutorverse p.222" },
     ] },
