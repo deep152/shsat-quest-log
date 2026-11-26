@@ -448,4 +448,9 @@ It's called "Plan", not "Today", so it reads as a guide, not a deadline.
   tonight. **Why:** his brother wants the time before 3:00 to go to math.
 - Nov 26: renamed "Geometry Mixed" to "Geometry & Measurements Mixed" (p.260)
   in the plan and the Lessons list, matching the book. Same id (t13).
+- Nov 26: a geometry video step before Geometry & Measurements Mixed: pause at
+  each question, try it, then watch their method even if he got it right.
+  Plan video buttons can now hold a direct link, not just a search.
+  **Why:** he solves some questions a shortcut way (like counting on a grid for
+  a midpoint) that won't work when the test only gives the points.
 
