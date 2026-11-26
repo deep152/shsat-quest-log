@@ -440,4 +440,8 @@ It's called "Plan", not "Today", so it reads as a guide, not a deadline.
   **Why:** he got a couple of the practice questions wrong again, and those
   numbers need to reach the tutor. He's done three nonfiction pages, so it's
   fiction's turn.
+- Nov 26, later: added Geometry Mixed (p.260), the rest of Algebra Mixed
+  (p.222), Within-Sentence Punctuation (p.62) and Commas in a list (p.66) before
+  the tutor. **Why:** he has about 3½ hours before 3:00, and these were still
+  open in his progress.
 
