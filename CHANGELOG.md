@@ -446,4 +446,6 @@ It's called "Plan", not "Today", so it reads as a guide, not a deadline.
   open in his progress.
 - Nov 26: moved the two punctuation sets (p.62, p.66) from before the tutor to
   tonight. **Why:** his brother wants the time before 3:00 to go to math.
+- Nov 26: renamed "Geometry Mixed" to "Geometry & Measurements Mixed" (p.260)
+  in the plan and the Lessons list, matching the book. Same id (t13).
 
